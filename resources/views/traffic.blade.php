@@ -5,17 +5,6 @@
             <p class="text-slate-500 text-sm">
                 Traffic Movement, Enroute & Terminal Overview
             </p>
-
-            <span class="hidden sm:block w-px h-4 bg-slate-300"></span>
-
-            <div class="flex items-center gap-1">
-                <span class="bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-1 rounded-full uppercase tracking-wide">
-                    Updated
-                </span>
-                <span class="bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-1 rounded-full">
-                    Aug 2026
-                </span>
-            </div>
         </div>
         <div class="mb-4">
             <h2 class="text-2xl font-semibold text-slate-800">
@@ -237,12 +226,21 @@
     <!-- ========================= ENROUTE ========================= -->
     <section class="space-y-6">
         <div class="mb-4">
-            <h2 class="text-2xl font-semibold text-slate-800">
-                Enroute Performance
+            <h2 class="flex items-center gap-3 text-2xl font-semibold text-slate-800">
+                <span>Enroute Performance</span>
+                <span class="hidden sm:block w-px h-5 bg-slate-300"></span>
+               <div class="inline-flex items-center gap-1">
+                    <span class="inline-flex items-center bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
+                        Updated
+                    </span>
+                    <span class="inline-flex items-center bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
+                        {{ $period }}
+                    </span>
+                </div>
             </h2>
             <div class="mt-2 h-1 w-16 bg-gradient-to-r from-blue-600 to-sky-100 rounded-full"></div>
         </div>
-
+        
         <!-- KPI + DONUT -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
@@ -334,7 +332,7 @@
                     
                     <div class="flex items-end justify-between gap-1 h-24 mb-2">
                         @foreach($peakHeights as $height)
-                            <div class="bg-slate-100 hover:bg-blue-500 w-full rounded-t-sm transition-all duration-300" 
+                            <div class="bg-blue-200 hover:bg-blue-500 w-full rounded-t-sm transition-all duration-300" 
                                 style="height: {{ $height }}%"></div>
                         @endforeach
                     </div>
@@ -394,11 +392,11 @@
                         <p class="text-xs text-slate-400">Perbandingan intensitas pergerakan terhadap kontribusi pendapatan</p>
                     </div>
                     <div class="flex gap-2">
-                        <span class="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                        <span class="flex items-center gap-1 text-[12px] font-bold text-slate-400">
                             <span class="w-2 h-2 rounded-full bg-blue-500"></span> Movement
                         </span>
-                        <span class="flex items-center gap-1 text-[10px] font-bold text-slate-400">
-                            <span class="w-2 h-2 rounded-full bg-sky-400"></span> Revenue Value
+                        <span class="flex items-center gap-1 text-[12px] font-bold text-slate-400">
+                            <span class="w-2 h-2 rounded-full bg-sky-300"></span> Revenue Value
                         </span>
                     </div>
                 </div>
@@ -429,7 +427,7 @@
                                             <div class="absolute top-0 left-0 bg-blue-500 h-full rounded-full transition-all duration-1000" style="width: {{ $row['movement_pct'] }}%"></div>
                                         </div>
                                         <div class="relative w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                            <div class="absolute top-0 left-0 bg-sky-400 h-full rounded-full transition-all duration-1000" style="width: {{ $row['revenue_pct'] }}%"></div>
+                                            <div class="absolute top-0 left-0 bg-sky-300 h-full rounded-full transition-all duration-1000" style="width: {{ $row['revenue_pct'] }}%"></div>
                                         </div>
                                     </div>
                                 </td>
@@ -507,7 +505,7 @@
             <div class="bg-white rounded-2xl shadow p-6 md:col-span-2">
                 <h3 class="font-semibold mb-4 text-slate-800">Revenue Trend – Terminal</h3>
                 <div class="h-60">
-                    <canvas id="lineTerminal"></canvas>
+                    <canvas id="lineTerminal1"></canvas>
                 </div>
             </div> 
         </div>
@@ -796,7 +794,7 @@ new Chart(document.getElementById('lineEnroute'), {
 });
 
 // --- LINE TERMINAL ---
-new Chart(document.getElementById('lineTerminal'), {
+new Chart(document.getElementById('lineTerminal1'), {
     type: 'line',
     data: {
         labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],

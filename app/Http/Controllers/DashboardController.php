@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EnrouteUpload;
 use App\Models\EnrouteData;
 use App\Models\Airline;
 use Illuminate\Support\Facades\DB;
@@ -50,18 +51,29 @@ class DashboardController extends Controller
             $revenueTrend[] = round($total / 1000000000, 1);
         }
         
-        // 4. Traffic Peak Window (distribusi per jam)
+        // 4. Traffic Peak Window (distribusi per jam dengan filter)
         $hourlyTraffic = [];
-        for ($hour = 0; $hour < 24; $hour+=3) {
+        for ($hour = 0; $hour < 24; $hour += 3) {
             $startHour = str_pad($hour, 2, '0', STR_PAD_LEFT);
             $endHour = str_pad($hour + 3, 2, '0', STR_PAD_LEFT);
             
-            $count = EnrouteData::where('time_in', '>=', "{$startHour}:00:00")
-                ->where('time_in', '<', "{$endHour}:00:00")
+            // Hitung hanya yang time_in valid (bukan '00:00:00' default)
+            $count = EnrouteData::whereNotNull('time_in')
+                ->where('time_in', '!=', '00:00:00')
+                ->whereTime('time_in', '>=', "{$startHour}:00:00")
+                ->whereTime('time_in', '<', "{$endHour}:00:00")
                 ->count();
             
             $hourlyTraffic[] = $count;
         }
+
+        // Log untuk debug
+        \Log::info('Hourly traffic distribution:', $hourlyTraffic);
+        
+        // Hitung total data dengan time_in valid
+        $totalValidTime = array_sum($hourlyTraffic);
+        \Log::info("Total data dengan time_in valid: " . $totalValidTime);
+        \Log::info("Total seluruh data: " . EnrouteData::count());
         
         // Normalize untuk tinggi bar (0-100%)
         $maxTraffic = max($hourlyTraffic) ?: 1;
@@ -69,10 +81,15 @@ class DashboardController extends Controller
             return round(($val / $maxTraffic) * 100);
         }, $hourlyTraffic);
         
-        // Cari jam peak
-        $peakIndex = array_search(max($hourlyTraffic), $hourlyTraffic);
-        $peakStart = str_pad($peakIndex * 3, 2, '0', STR_PAD_LEFT) . ':00';
-        $peakEnd = str_pad(($peakIndex * 3) + 3, 2, '0', STR_PAD_LEFT) . ':00';
+        // Cari jam peak (hanya jika ada data)
+        if (max($hourlyTraffic) > 0) {
+            $peakIndex = array_search(max($hourlyTraffic), $hourlyTraffic);
+            $peakStart = str_pad($peakIndex * 3, 2, '0', STR_PAD_LEFT) . ':00';
+            $peakEnd = str_pad(($peakIndex * 3) + 3, 2, '0', STR_PAD_LEFT) . ':00';
+        } else {
+            $peakStart = '00:00';
+            $peakEnd = '00:00';
+        }
         
         // 5. Aircraft Category Mix
         $heavyTypes = ['B77', 'B78', 'B74', 'A33', 'A34', 'A35', 'A38'];
@@ -116,8 +133,8 @@ class DashboardController extends Controller
         foreach ($topAirlines as $index => $item) {
             $airline = Airline::where('airline3_code', $item->airline3_code)->first();
             
-            $movementPct = round(($item->flight_count / $totalFlights) * 100);
-            $revenuePct = $totalRevenue > 0 ? round(($item->total_revenue / $totalRevenue) * 100) : 0;
+            $movementPct = round(($item->flight_count / $totalFlights) * 300);
+            $revenuePct = $totalRevenue > 0 ? round(($item->total_revenue / $totalRevenue) * 300) : 0;
             
             $topAirlinesData[] = [
                 'name' => $airline->airline_name ?? $item->airline3_code,
@@ -203,6 +220,10 @@ class DashboardController extends Controller
             $trafficPerMonth[] = $enrouteCount;
         }
         
+        // Misal ambil dari upload terakhir
+        $latestDate = EnrouteUpload::max('tanggal_akhir');
+        $period = $latestDate ? Carbon::parse($latestDate)->format('d M Y') : 'Aug 2026';
+
         // ============================================
         // PASS KE VIEW
         // ============================================
@@ -213,6 +234,7 @@ class DashboardController extends Controller
             'domPercentage',
             'intPercentage',
             'revenueTrend',
+            'hourlyTraffic',
             'peakHeights',
             'peakStart',
             'peakEnd',
@@ -224,7 +246,8 @@ class DashboardController extends Controller
             'internationalPct',
             'domesticPct',
             'topAirlinesMovement',
-            'topRoutes'
+            'topRoutes',
+            'period'
         ));
     }
     
