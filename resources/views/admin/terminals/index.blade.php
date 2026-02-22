@@ -1,6 +1,6 @@
 <?php
-use App\Models\EnrouteUpload;
-use App\Models\EnrouteData;
+use App\Models\TerminalUpload;
+use App\Models\TerminalData;
 use App\Models\Airline;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
@@ -35,11 +35,11 @@ class extends Component {
     }
     
     public function lihatDetail($id)
-{
-    $this->selectedUploadId = $id;
-    $this->selectedUpload = EnrouteUpload::with('enrouteData.airline')->find($id);
-    $this->showDetail = true;
-}
+    {
+        $this->selectedUploadId = $id;
+        $this->selectedUpload = TerminalUpload::with('terminalData.airline')->find($id);
+        $this->showDetail = true;
+    }
 
     public function backToUploads()
     {
@@ -50,14 +50,14 @@ class extends Component {
 
     public function delete($id)
     {
-        EnrouteUpload::destroy($id);
+        TerminalUpload::destroy($id);
         session()->flash('message', 'Data upload berhasil dihapus');
     }
 
     public function deleteDetail($id)
     {
-        EnrouteData::destroy($id);
-        $this->selectedUpload = EnrouteUpload::with('enrouteData.airline')->find($this->selectedUploadId);
+        TerminalData::destroy($id);
+        $this->selectedUpload = TerminalUpload::with('terminalData.airline')->find($this->selectedUploadId);
         session()->flash('message', 'Data penerbangan berhasil dihapus');
     }
 
@@ -66,7 +66,7 @@ class extends Component {
         $this->prosesImport();
     }
 
-    private function parseRouteCharge($value)
+    private function parseBiayaTerminal($value)
     {
         if (empty($value)) {
             return ['value' => null, 'currency' => 'IDR'];
@@ -74,7 +74,6 @@ class extends Component {
         
         $value = trim($value);
         $currency = 'IDR';
-        $number = null;
         
         // Deteksi currency
         if (strpos($value, '$') !== false) {
@@ -84,25 +83,61 @@ class extends Component {
         // Bersihkan dari Rp, $, spasi
         $clean = preg_replace('/[Rp$\s]/i', '', $value);
         
-        // Handle format dengan koma sebagai pemisah ribuan
-        if (preg_match('/^\d{1,3}(,\d{3})*(\.\d+)?$/', $clean)) {
-            // Format US: 1,303.09
-            $clean = str_replace(',', '', $clean); // Hapus koma ribuan
-            $number = floatval($clean);
+        // Handle format Indonesia: "429,11" (koma sebagai desimal)
+        if (strpos($clean, ',') !== false) {
+            // Hapus titik ribuan jika ada
+            $clean = str_replace('.', '', $clean);
+            // Ganti koma desimal dengan titik
+            $clean = str_replace(',', '.', $clean);
         }
-        // Handle format Indonesia: 1.328,580 atau 1,328,580 (Rp)
-        elseif (preg_match('/^\d{1,3}(\.\d{3})*(,\d+)?$/', $clean) || preg_match('/^\d{1,3}(,\d{3})*(\.\d+)?$/', $clean)) {
-            $clean = str_replace('.', '', $clean); // Hapus titik ribuan
-            $clean = str_replace(',', '.', $clean); // Ganti koma desimal
-            $number = floatval($clean);
-        } else {
-            $number = floatval($clean);
-        }
+        
+        $number = floatval($clean);
+        
+        // Log untuk debugging
+        \Log::info("Parse biaya: value={$value}, clean={$clean}, number={$number}, currency={$currency}");
         
         return [
             'value' => $number,
             'currency' => $currency
         ];
+    }
+    
+    private function parseTime($value)
+    {
+        if (empty($value)) return null;
+        
+        // Format "02:34" atau "2:34"
+        if (preg_match('/^\d{1,2}:\d{2}$/', $value)) {
+            $parts = explode(':', $value);
+            $hour = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
+            $minute = str_pad($parts[1], 2, '0', STR_PAD_LEFT);
+            return "{$hour}:{$minute}:00";
+        }
+        
+        return null;
+    }
+    
+    private function parseDate($value)
+    {
+        if (empty($value)) return null;
+        
+        $value = trim($value);
+        
+        // Format dd/mm/yyyy
+        if (preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $value)) {
+            $parts = explode('/', $value);
+            $day = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
+            $month = str_pad($parts[1], 2, '0', STR_PAD_LEFT);
+            $year = $parts[2];
+            return "{$year}-{$month}-{$day}";
+        }
+        
+        // Format Y-m-d
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return $value;
+        }
+        
+        return null;
     }
     
     public function prosesImport()
@@ -120,18 +155,17 @@ class extends Component {
                 return;
             }
             
-            // ============================================
-            // TAHAP 6: Simpan ke tabel enroute_upload dan enroute_data
-            // ============================================
             $path = $this->fileImport->getRealPath();
             $spreadsheet = IOFactory::load($path);
             $rows = $spreadsheet->getActiveSheet()->toArray();
             
-            // Buang 5 baris pertama (header)
-            array_shift($rows); array_shift($rows); array_shift($rows); 
-            array_shift($rows); array_shift($rows);
+            // Buang baris header (judul)
+            array_shift($rows); // Buang baris "DATA Terminal Charge"
+            array_shift($rows); // Buang baris "UNIT/LOKASI..."
+            array_shift($rows); // Buang baris "DATE..."
+            array_shift($rows); // Buang baris kosong
             
-            // Ambil header kolom (baris ke-6)
+            // Ambil header kolom
             $headers = array_shift($rows);
             
             // Filter data bersih
@@ -145,156 +179,111 @@ class extends Component {
             $totalData = count($dataBersih);
             
             // ============================================
-            // INIT CURRENCY SERVICE & KUMPULKAN TANGGAL
+            // INIT CURRENCY SERVICE
             // ============================================
             $currencyService = new \App\Services\CurrencyService();
             
-            // Kumpulkan semua tanggal DOF
+            // Kumpulkan semua tanggal
             $uniqueDates = [];
             foreach ($dataBersih as $row) {
-                if (!empty($row[4])) {
-                    $tanggal = trim($row[4]);
-                    if (strpos($tanggal, ' ') !== false) {
-                        $tanggal = explode(' ', $tanggal)[0];
-                    }
-                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal)) {
-                        $uniqueDates[$tanggal] = true;
-                    }
+                $tanggal = $this->parseDate($row[4] ?? null);
+                if ($tanggal) {
+                    $uniqueDates[$tanggal] = true;
                 }
             }
             
-            // Ambil kurs untuk semua tanggal (batch request)
+            // Ambil kurs
             $rates = [];
             if (!empty($uniqueDates)) {
                 $dates = array_keys($uniqueDates);
                 $minDate = min($dates);
                 $maxDate = max($dates);
-                
-                \Log::info("Ambil kurs dari {$minDate} sampai {$maxDate}");
                 $rates = $currencyService->getRatesForDateRange($minDate, $maxDate);
             }
             
-            // SIMPAN KE DATABASE
             DB::beginTransaction();
             
-            // 1. Simpan ke enroute_upload
-            $upload = EnrouteUpload::create([
+            // Simpan ke terminal_upload
+            $upload = TerminalUpload::create([
                 'file_name' => $this->fileImport->getClientOriginalName(),
                 'uploaded_by' => auth()->user()->name ?? 'System',
                 'status' => 'processed',
                 'total_rows' => $totalData
             ]);
             
-            // 2. Simpan detail ke enroute_data
             $successCount = 0;
-            $dofValues = [];
+            $tanggalValues = [];
             
             foreach ($dataBersih as $row) {
-                // Mapping sesuai struktur Excel
-                $aircraftId = $row[1] ?? null;      // Kolom Aircraft ID
+                // Mapping sesuai struktur Excel Terminal
+                $aircraftId = $row[1] ?? null;
                 if (empty($aircraftId)) continue;
                 
                 $airline3Code = substr($aircraftId, 0, 3);
                 $airline = Airline::where('airline3_code', $airline3Code)->first();
                 
-                // Parse DOF
-                $dof = null;
-                if (!empty($row[4])) {
-                    $tanggal = trim($row[4]); // "2026-01-01 00:00:00" atau "1/6/2026"
-                    
-                    // Ambil hanya tanggalnya (jika ada waktu)
-                    if (strpos($tanggal, ' ') !== false) {
-                        $tanggal = explode(' ', $tanggal)[0];
-                    }
-                    
-                    // Cek format Y-m-d (2026-01-31)
-                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal)) {
-                        $dof = $tanggal;
-                        $dofValues[] = $dof;
-                    }
-                    // Cek format m/d/yyyy atau mm/dd/yyyy (US format)
-                    elseif (preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $tanggal)) {
-                        $parts = explode('/', $tanggal);
-                        // parts[0] = bulan, parts[1] = tanggal, parts[2] = tahun
-                        $bulan = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
-                        $hari = str_pad($parts[1], 2, '0', STR_PAD_LEFT);
-                        $tahun = $parts[2];
-                        $dof = $tahun . '-' . $bulan . '-' . $hari;
-                        $dofValues[] = $dof;
-                    } else {
-                        \Log::warning('Format DOF tidak dikenal: ' . $tanggal);
-                        continue;
-                    }
+                // Parse tanggal
+                $tanggal = $this->parseDate($row[4] ?? null);
+                if ($tanggal) {
+                    $tanggalValues[] = $tanggal;
                 } else {
                     continue;
                 }
-
-                // PARSE ROUTE CHARGE
-                $chargeData = $this->parseRouteCharge($row[14] ?? null);
                 
-                // CEK apakah $chargeData array
-                if (is_array($chargeData)) {
-                    $enrouteCharge = $chargeData['value'] ?? null;
-                    $currency = $chargeData['currency'] ?? 'IDR';
-                } else {
-                    \Log::error('parseRouteCharge tidak mengembalikan array: ' . json_encode($chargeData));
-                    $enrouteCharge = null;
-                    $currency = 'IDR';
-                }
+                // Parse waktu (ATA)
+                $waktuKedatangan = $this->parseTime($row[7] ?? null);
                 
-                // ============================================
-                // KONVERSI KE IDR (dengan FALLBACK)
-                // ============================================
+                // Parse MTOW (berat)
+                $mtow = $this->parseNumber($row[8] ?? null);
+                
+                // Parse Terminal Charge
+                $chargeData = $this->parseBiayaTerminal($row[9] ?? null);
+                $biayaTerminal = $chargeData['value'] ?? null;
+                $currency = $chargeData['currency'] ?? 'IDR';
+                
+                // Konversi ke IDR
                 $exchangeRate = null;
-                $enrouteChargeIdr = null;
+                $biayaTerminalIdr = null;
 
-                if ($enrouteCharge) {
-                    if ($currency == 'USD' && $dof) {
-                        // USD: konversi pakai kurs dengan fallback
-                        $exchangeRate = $currencyService->getRateWithFallback($dof, $rates);
-                        $enrouteChargeIdr = $enrouteCharge * $exchangeRate;
-                        \Log::info("USD → IDR: {$enrouteCharge} x {$exchangeRate} = {$enrouteChargeIdr} (dof: {$dof})");
-                        
+                if ($biayaTerminal) {
+                    if ($currency == 'USD' && $tanggal) {
+                        $exchangeRate = $currencyService->getRateWithFallback($tanggal, $rates);
+                        $biayaTerminalIdr = $biayaTerminal * $exchangeRate;
                     } elseif ($currency == 'IDR') {
-                        // IDR: langsung pakai nilainya
-                        $enrouteChargeIdr = $enrouteCharge;
-                        \Log::info("IDR: {$enrouteChargeIdr}");
+                        $biayaTerminalIdr = $biayaTerminal;
                     }
                 }
-
-                // SIMPAN DATA
-                EnrouteData::create([
-                    'id_enroute_upload' => $upload->id_enroute_upload,
+                
+                // Simpan data
+                TerminalData::create([
+                    'id_terminal_upload' => $upload->id_terminal_upload,
                     'aircraft_id' => $aircraftId,
                     'airline3_code' => $airline3Code,
                     'id_airline' => $airline->id ?? null,
-                    'adep' => $row[2] ?? null,
-                    'ades' => $row[3] ?? null,
-                    'dof' => $dof,
+                    'bandara' => $row[3] ?? null, // ADES sebagai bandara tujuan
+                    'tanggal' => $tanggal,
                     'registrasi' => $row[5] ?? null,
                     'type' => $row[6] ?? null,
-                    'point_in' => $row[7] ?? null,
-                    'time_in' => !empty($row[8]) ? $row[8] : '00:00',
-                    'point_out' => $row[9] ?? null,
-                    'time_out' => !empty($row[10]) ? $row[10] : '00:00',
-                    'faktor_jarak' => $this->parseNumber($row[11] ?? null),
-                    'faktor_berat' => $this->parseNumber($row[12] ?? null, true),
-                    'route_unit' => $this->parseNumber($row[13] ?? null),
-                    'enroute_charge' => $enrouteCharge,
+                    'terminal' => $row[2] ?? null, // ADEP sebagai terminal asal
+                    'waktu_kedatangan' => $waktuKedatangan,
+                    'waktu_keberangkatan' => null,
+                    'gate' => null,
+                    'parking_stand' => $mtow, // Simpan MTOW di parking_stand
+                    'biaya_terminal' => $biayaTerminal,
                     'currency' => $currency,
                     'exchange_rate' => $exchangeRate,
-                    'enroute_charge_idr' => $enrouteChargeIdr,
-                    'flight_type' => $row[15] ?? null,
+                    'biaya_terminal_idr' => $biayaTerminalIdr,
+                    'status_penerbangan' => $row[10] ?? null, // Flight Type
                 ]);
                 
                 $successCount++;
             }
             
             // Update range tanggal
-            if (!empty($dofValues)) {
+            if (!empty($tanggalValues)) {
                 $upload->update([
-                    'tanggal_awal' => min($dofValues),
-                    'tanggal_akhir' => max($dofValues),
+                    'tanggal_awal' => min($tanggalValues),
+                    'tanggal_akhir' => max($tanggalValues),
                     'total_rows' => $successCount
                 ]);
             }
@@ -302,11 +291,11 @@ class extends Component {
             DB::commit();
             
             session()->flash('message', 
-                "✅ DATA BERHASIL DISIMPAN!<br>" .
-                "ID Upload: " . $upload->id_enroute_upload . "<br>" .
+                "✅ DATA TERMINAL BERHASIL DISIMPAN!<br>" .
+                "ID Upload: " . $upload->id_terminal_upload . "<br>" .
                 "File: " . $upload->file_name . "<br>" .
                 "Total data: " . $successCount . " baris<br>" .
-                "Range DOF: " . ($upload->tanggal_awal ?? '-') . " s/d " . ($upload->tanggal_akhir ?? '-')
+                "Range Tanggal: " . ($upload->tanggal_awal ?? '-') . " s/d " . ($upload->tanggal_akhir ?? '-')
             );
             
             $this->reset('fileImport');
@@ -315,20 +304,20 @@ class extends Component {
         } catch (\Exception $e) {
             DB::rollBack();
             session()->flash('error', 'Error: ' . $e->getMessage() . ' - Line: ' . $e->getLine());
-            \Log::error('Import error: ' . $e->getMessage());
+            \Log::error('Import terminal error: ' . $e->getMessage());
             \Log::error($e->getTraceAsString());
         }
     }
 
-    // Helper functions
     private function parseNumber($value, $integer = false)
     {
         if (empty($value)) return null;
         
         if (is_string($value)) {
-            $value = preg_replace('/[Rp$\s]/i', '', $value);
+            // Hapus karakter non-numeric kecuali titik dan koma
+            $value = preg_replace('/[^0-9.,]/', '', $value);
             
-            if (strpos($value, ',') !== false && preg_match('/,\d{2}$/', $value)) {
+            if (strpos($value, ',') !== false) {
                 $value = str_replace('.', '', $value);
                 $value = str_replace(',', '.', $value);
             }
@@ -336,24 +325,6 @@ class extends Component {
         
         $number = floatval($value);
         return $integer ? intval($number) : $number;
-    }
-
-    private function parseDecimal($value)
-    {
-        if (empty($value)) return null;
-        
-        if (is_string($value) && strpos($value, ',') !== false) {
-            $value = str_replace('.', '', $value);
-            $value = str_replace(',', '.', $value);
-        }
-        
-        return floatval($value);
-    }
-
-    private function parseInt($value)
-    {
-        if (empty($value)) return null;
-        return intval(preg_replace('/[^0-9]/', '', $value));
     }
 
     public function export()
@@ -374,19 +345,19 @@ class extends Component {
     public function with() {
         if ($this->showDetail) {
             return [
-                'detailData' => EnrouteData::with('airline')
-                    ->where('id_enroute_upload', $this->selectedUploadId)
+                'detailData' => TerminalData::with('airline')
+                    ->where('id_terminal_upload', $this->selectedUploadId)
                     ->when($this->search, fn($q) => $q->where('aircraft_id', 'like', "%{$this->search}%")
-                        ->orWhere('adep', 'like', "%{$this->search}%")
-                        ->orWhere('ades', 'like', "%{$this->search}%"))
+                        ->orWhere('bandara', 'like', "%{$this->search}%")
+                        ->orWhere('registrasi', 'like', "%{$this->search}%"))
                     ->when($this->filterAirline, fn($q) => $q->where('airline3_code', $this->filterAirline))
-                    ->orderBy('dof', 'desc')
+                    ->orderBy('tanggal', 'desc')
                     ->paginate(20, pageName: 'detail-page')
             ];
         }
 
         return [
-            'uploads' => EnrouteUpload::query()
+            'uploads' => TerminalUpload::query()
                 ->when($this->search, fn($q) => $q->where('file_name', 'like', "%{$this->search}%")
                     ->orWhere('uploaded_by', 'like', "%{$this->search}%"))
                 ->when($this->filterMonth, function($q) {
@@ -397,7 +368,7 @@ class extends Component {
                 ->orderBy($this->sortField, $this->sortDirection)
                 ->paginate(10),
             'airlines' => Airline::orderBy('airline_name')->get(),
-            'months' => EnrouteUpload::select(DB::raw("DATE_FORMAT(tanggal_jam, '%Y-%m') as month"))
+            'months' => TerminalUpload::select(DB::raw("DATE_FORMAT(tanggal_jam, '%Y-%m') as month"))
                 ->distinct()
                 ->orderBy('month', 'desc')
                 ->pluck('month')
@@ -410,25 +381,19 @@ class extends Component {
     <header class="flex justify-between items-center">
         <h1 class="text-3xl font-black text-slate-800 tracking-tight">
             @if($showDetail)
-                <!-- <button wire:click="backToUploads" class="mr-2 text-indigo-600 hover:text-indigo-800 transition">
+                <button wire:click="backToUploads" class="mr-2 text-emerald-600 hover:text-emerald-800 transition">
                     ←
-                </button> -->
-                Detail Upload: {{ $selectedUpload->file_name }}
+                </button>
+                Detail Upload Terminal: {{ $selectedUpload->file_name }}
             @else
-                Data Enroutes
+                Data Terminal Charge
             @endif
         </h1>
-        @if(!$showDetail)
-        <!-- <div class="flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-2xl">
-            <span class="text-xs font-bold text-indigo-600 uppercase">Total Upload</span>
-            <span class="text-xl font-black text-indigo-900">{{ \App\Models\EnrouteUpload::count() }}</span>
-        </div> -->
-        @endif
     </header>
 
     @if (session()->has('message'))
         <div class="mb-4 p-4 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 text-sm font-bold animate-pulse">
-            {{ session('message') }}
+            {!! session('message') !!}
         </div>
     @endif
 
@@ -439,7 +404,7 @@ class extends Component {
     @endif
 
     @if($showDetail)
-        {{-- DETAIL VIEW DENGAN STATISTIK --}}
+        {{-- DETAIL VIEW --}}
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
             
             {{-- HEADER DETAIL dengan Statistik --}}
@@ -447,7 +412,7 @@ class extends Component {
                 <div class="flex items-center justify-between mb-6">
                     <div>
                         <h2 class="text-2xl font-black text-slate-800">{{ $selectedUpload->file_name }}</h2>
-                        <p class="text-sm text-slate-500 mt-1">Detail data upload</p>
+                        <p class="text-sm text-slate-500 mt-1">Detail data terminal</p>
                     </div>
                     <button wire:click="backToUploads" class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-bold transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -459,47 +424,46 @@ class extends Component {
 
                 {{-- STATISTIK RINGKASAN --}}
                 @php
-                    $totalData = $selectedUpload->enrouteData->count();
-                    $totalRevenueIDR = $selectedUpload->enrouteData->where('currency', 'IDR')->sum('enroute_charge');
-                    $totalRevenueUSD = $selectedUpload->enrouteData->where('currency', 'USD')->sum('enroute_charge');
-                    $totalRevenueIDRConverted = $selectedUpload->enrouteData->where('currency', 'USD')->sum('enroute_charge_idr');
-                    $totalRouteUnit = $selectedUpload->enrouteData->sum('route_unit');
-                    $uniqueAirlines = $selectedUpload->enrouteData->pluck('airline3_code')->unique()->count();
+                    $totalData = $selectedUpload->terminalData->count();
+                    $totalBiayaIDR = $selectedUpload->terminalData->where('currency', 'IDR')->sum('biaya_terminal');
+                    $totalBiayaUSD = $selectedUpload->terminalData->where('currency', 'USD')->sum('biaya_terminal');
+                    $totalBiayaIDRConverted = $selectedUpload->terminalData->where('currency', 'USD')->sum('biaya_terminal_idr');
+                    $uniqueAirlines = $selectedUpload->terminalData->pluck('airline3_code')->unique()->count();
+                    $totalBerat = $selectedUpload->terminalData->sum('parking_stand');
                 @endphp
 
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-                    <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-xl">
-                        <div class="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-1">Total Data</div>
-                        <div class="text-2xl font-black text-indigo-900">{{ number_format($totalData) }}</div>
-                        <div class="text-[10px] text-indigo-500 mt-1">baris data</div>
+                    <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-xl">
+                        <div class="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Total Data</div>
+                        <div class="text-2xl font-black text-emerald-900">{{ number_format($totalData) }}</div>
+                        <div class="text-[10px] text-emerald-500 mt-1">baris data</div>
                     </div>
 
                     <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-xl">
-                        <div class="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Revenue IDR</div>
-                        <div class="text-lg font-black text-emerald-900">Rp {{ number_format($totalRevenueIDR, 0, ',', '.') }}</div>
-                        <div class="text-[10px] text-emerald-500 mt-1">asli IDR</div>
+                        <div class="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Biaya IDR</div>
+                        <div class="text-lg font-black text-emerald-900">Rp {{ number_format($totalBiayaIDR, 0, ',', '.') }}</div>
                     </div>
 
-                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl">
-                        <div class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-1">Revenue USD</div>
-                        <div class="text-lg font-black text-blue-900">$ {{ number_format($totalRevenueUSD, 2) }}</div>
-                        <div class="text-[10px] text-blue-500 mt-1">≈ Rp {{ number_format($totalRevenueIDRConverted, 0, ',', '.') }}</div>
+                    <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-xl">
+                        <div class="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Biaya USD</div>
+                        <div class="text-lg font-black text-emerald-900">$ {{ number_format($totalBiayaUSD, 2) }}</div>
+                        <div class="text-[10px] text-emerald-500 mt-1">≈ Rp {{ number_format($totalBiayaIDRConverted, 0, ',', '.') }}</div>
                     </div>
 
-                    <div class="bg-gradient-to-br from-amber-50 to-amber-100 p-4 rounded-xl">
-                        <div class="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">Route Unit</div>
-                        <div class="text-2xl font-black text-amber-900">{{ number_format($totalRouteUnit) }}</div>
-                        <div class="text-[10px] text-amber-500 mt-1">total unit</div>
+                    <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-xl">
+                        <div class="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Maskapai</div>
+                        <div class="text-2xl font-black text-emerald-900">{{ $uniqueAirlines }}</div>
+                        <div class="text-[10px] text-emerald-500 mt-1">unique airlines</div>
                     </div>
-
-                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl">
-                        <div class="text-xs font-bold text-purple-600 uppercase tracking-wide mb-1">Maskapai</div>
-                        <div class="text-2xl font-black text-purple-900">{{ $uniqueAirlines }}</div>
-                        <div class="text-[10px] text-purple-500 mt-1">unique airlines</div>
+                    
+                    <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-xl">
+                        <div class="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">Total MTOW</div>
+                        <div class="text-lg font-black text-emerald-900">{{ number_format($totalBerat, 2) }}</div>
+                        <div class="text-[10px] text-emerald-500 mt-1">ton</div>
                     </div>
                 </div>
 
-                {{-- INFO UPLOAD (ringkas) --}}
+                {{-- INFO UPLOAD --}}
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs bg-slate-50 p-4 rounded-xl">
                     <div>
                         <span class="text-slate-400 block">Range Tanggal</span>
@@ -522,14 +486,14 @@ class extends Component {
 
             <div class="space-y-6 mb-8">
                 <div class="relative flex-1 group">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
                     <input wire:model.live.debounce.500ms="search" 
                            type="text" 
-                           placeholder="Cari aircraft ID, rute (ADEP/ADES)..." 
+                           placeholder="Cari aircraft ID, bandara, registrasi..." 
                            class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm">
                 </div>
             </div>
@@ -542,52 +506,51 @@ class extends Component {
                             <th class="p-3 text-xs font-black text-slate-500 uppercase">Aircraft ID</th>
                             <th class="p-3 text-xs font-black text-slate-500 uppercase">Airline</th>
                             <th class="p-3 text-xs font-black text-slate-500 uppercase">Rute</th>
-                            <th class="p-3 text-xs font-black text-slate-500 uppercase">DOF</th>
+                            <th class="p-3 text-xs font-black text-slate-500 uppercase">Tanggal</th>
                             <th class="p-3 text-xs font-black text-slate-500 uppercase">Type</th>
-                            <th class="p-3 text-xs font-black text-slate-500 uppercase">Time In/Out</th>
-                            <th class="p-3 text-xs font-black text-slate-500 uppercase">Route Charge</th>
+                            <th class="p-3 text-xs font-black text-slate-500 uppercase">ATA</th>
+                            <th class="p-3 text-xs font-black text-slate-500 uppercase">MTOW</th>
+                            <th class="p-3 text-xs font-black text-slate-500 uppercase">Biaya</th>
                             <th class="p-3 text-xs font-black text-slate-500 uppercase text-center w-20">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50 text-sm">
                         @forelse($detailData as $index => $data)
-                            <tr wire:key="detail-{{ $data->id_enroute_data }}" class="hover:bg-slate-50 transition">
+                            <tr wire:key="detail-{{ $data->id_terminal_data }}" class="hover:bg-slate-50 transition">
                                 <td class="p-3 text-center text-slate-400 font-mono">{{ $detailData->firstItem() + $index }}</td>
                                 <td class="p-3 font-mono font-bold text-slate-800">{{ $data->aircraft_id }}</td>
                                 <td class="p-3">
-                                    <span class="font-bold text-indigo-600">{{ $data->airline3_code }}</span>
+                                    <span class="font-bold text-emerald-600">{{ $data->airline3_code }}</span>
                                     @if($data->airline)
                                         <span class="text-xs block text-slate-400">{{ $data->airline->airline_name }}</span>
                                     @endif
                                 </td>
                                 <td class="p-3">
-                                    <span class="font-mono font-bold">{{ $data->adep }}</span> 
+                                    <span class="font-mono">{{ $data->terminal }}</span> 
                                     <span class="text-slate-300 mx-1">→</span> 
-                                    <span class="font-mono font-bold">{{ $data->ades }}</span>
+                                    <span class="font-mono">{{ $data->bandara }}</span>
                                 </td>
-                                <td class="p-3 font-mono">{{ $data->dof->format('d/m/Y') }}</td>
+                                <td class="p-3 font-mono">{{ $data->tanggal->format('d/m/Y') }}</td>
                                 <td class="p-3 font-mono">{{ $data->type }}</td>
-                                <td class="p-3 font-mono text-xs">
-                                    {{ substr($data->time_in, 0, 5) }} / {{ substr($data->time_out, 0, 5) }}
-                                </td>
+                                <td class="p-3 font-mono">{{ $data->waktu_kedatangan ? substr($data->waktu_kedatangan, 0, 5) : '-' }}</td>
+                                <td class="p-3 font-mono text-right">{{ number_format($data->parking_stand, 2) }}</td>
                                 <td class="p-3 font-mono font-bold">
                                     @if($data->currency == 'USD')
-                                        <span class="text-amber-600">$ {{ number_format($data->enroute_charge, 2) }}</span>
-                                        <span class="text-xs block text-slate-400">≈ Rp {{ number_format($data->enroute_charge_idr, 0, ',', '.') }}</span>
+                                        <span class="text-amber-600">$ {{ number_format($data->biaya_terminal, 2) }}</span>
+                                        <span class="text-xs block text-slate-400">≈ Rp {{ number_format($data->biaya_terminal_idr, 0, ',', '.') }}</span>
                                     @else
-                                        <span class="text-emerald-600">Rp {{ number_format($data->enroute_charge, 0, ',', '.') }}</span>
-                                        <span class="text-xs block text-slate-400">IDR</span>
+                                        <span class="text-emerald-600">Rp {{ number_format($data->biaya_terminal, 0, ',', '.') }}</span>
                                     @endif
                                 </td>
                                 <td class="p-3 text-center">
-                                    <button wire:click="deleteDetail({{ $data->id_enroute_data }})" wire:confirm="Hapus data ini?" class="p-2 text-red-600 hover:bg-red-50 rounded-xl transition">
+                                    <button wire:click="deleteDetail({{ $data->id_terminal_data }})" wire:confirm="Hapus data ini?" class="p-2 text-red-600 hover:bg-red-50 rounded-xl transition">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                     </button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="p-12 text-center text-slate-400 font-medium italic">
+                                <td colspan="10" class="p-12 text-center text-slate-400 font-medium italic">
                                     Tidak ada data dalam file upload ini.
                                 </td>
                             </tr>
@@ -608,7 +571,7 @@ class extends Component {
             <div class="space-y-6 mb-8">
                 <div class="flex flex-col md:flex-row gap-4 items-center">
                     <div class="relative flex-1 group w-full">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
@@ -631,7 +594,7 @@ class extends Component {
                                 <span>{{ $fileImport ? $fileImport->getClientOriginalName() : 'Pilih Excel' }}</span>
                             </label>
                             <div class="w-px h-4 bg-slate-200 mx-1"></div>
-                            <button wire:click="import" wire:loading.attr="disabled" class="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-xs transition-all disabled:opacity-50">
+                            <button wire:click="import" wire:loading.attr="disabled" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-all disabled:opacity-50">
                                 <span wire:loading.remove wire:target="import">Import</span>
                                 <span wire:loading wire:target="import">Upload...</span>
                             </button>
@@ -659,18 +622,18 @@ class extends Component {
                     </thead>
                     <tbody class="divide-y divide-slate-50 text-sm">
                         @forelse($uploads as $index => $upload)
-                            <tr wire:key="upload-{{ $upload->id_enroute_upload }}" class="hover:bg-slate-50 transition cursor-pointer" wire:click="lihatDetail({{ $upload->id_enroute_upload }})">
+                            <tr wire:key="upload-{{ $upload->id_terminal_upload }}" class="hover:bg-slate-50 transition cursor-pointer" wire:click="lihatDetail({{ $upload->id_terminal_upload }})">
                                 <td class="p-4 text-center text-slate-400 font-mono">{{ $uploads->firstItem() + $index }}</td>
-                                <td class="p-4 font-mono font-bold text-indigo-600">{{ $upload->file_name }}</td>
+                                <td class="p-4 font-mono font-bold text-emerald-600">{{ $upload->file_name }}</td>
                                 <td class="p-4 text-slate-600">{{ $upload->tanggal_jam->format('d/m/Y H:i') }}</td>
                                 <td class="p-4 font-mono text-slate-500">{{ $upload->range_tanggal }}</td>
-                                <td class="p-4 text-center font-mono font-bold">{{ $upload->total_rows ?? $upload->enrouteData->count() }}</td>
+                                <td class="p-4 text-center font-mono font-bold">{{ $upload->total_rows ?? $upload->terminalData->count() }}</td>
                                 <td class="p-4 text-center">
                                     <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">{{ $upload->status }}</span>
                                 </td>
                                 <td class="p-4 text-center" wire:click.stop>
                                     <div class="flex justify-center gap-1">
-                                        <button wire:click="delete({{ $upload->id_enroute_upload }})" wire:confirm="Hapus data upload ini?" class="p-2 text-red-600 hover:bg-red-50 rounded-xl transition">
+                                        <button wire:click="delete({{ $upload->id_terminal_upload }})" wire:confirm="Hapus data upload ini?" class="p-2 text-red-600 hover:bg-red-50 rounded-xl transition">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                         </button>
                                     </div>
@@ -679,7 +642,7 @@ class extends Component {
                         @empty
                             <tr>
                                 <td colspan="7" class="p-12 text-center text-slate-400 font-medium italic">
-                                    Belum ada data upload.
+                                    Belum ada data upload terminal.
                                 </td>
                             </tr>
                         @endforelse

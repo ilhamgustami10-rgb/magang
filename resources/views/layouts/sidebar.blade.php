@@ -14,7 +14,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="icon icon-tabler icons-tabler-outline icon-tabler-route-square"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 17h4v4h-4l0 -4" /><path d="M17 3h4v4h-4l0 -4" /><path d="M11 19h5.5a3.5 3.5 0 0 0 0 -7h-8a3.5 3.5 0 0 1 0 -7h4.5" /></svg>
             <span class="font-bold text-sm">Enroute</span>
         </a>
-        <a href="" class="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all">
+        <a href="{{ route('admin.terminals.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all {{ request()->routeIs('admin.terminals.index') || request()->is('admin/terminals*') ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-600 hover:bg-slate-50' }}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="icon icon-tabler icons-tabler-outline icon-tabler-air-traffic-control"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11 3h2" /><path d="M12 3v3" /><path d="M5.998 6h12.004a2 2 0 0 1 1.916 2.575l-1.8 6a2 2 0 0 1 -1.916 1.425h-8.404a2 2 0 0 1 -1.916 -1.425l-1.8 -6a2 2 0 0 1 1.916 -2.575" /><path d="M8.5 6l1.5 10v5" /><path d="M15.5 6l-1.5 10v5" /></svg>            <span class="font-bold text-sm">Terminal</span>
         </a>
         <hr class="my-4 border-slate-100">

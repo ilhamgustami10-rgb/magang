@@ -48,6 +48,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Volt::route('enroutes', 'admin.enroutes.index')->name('enroutes.index');
         Volt::route('/', 'admin.index')->name('index');
 
+        Volt::route('terminals', 'admin.terminals.index')->name('terminals.index');
+        Volt::route('/', 'admin.index')->name('index');
+
     });
 
     // 3. User Profile Management

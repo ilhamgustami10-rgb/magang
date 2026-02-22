@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 
 use App\Models\EnrouteUpload;
 use App\Models\EnrouteData;
+use App\Models\TerminalUpload;
+use App\Models\TerminalData;
 use App\Models\Airline;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -36,7 +38,7 @@ class DashboardController extends Controller
         }
         
         // 3. Revenue Trend per Bulan (Jan-Agu 2026)
-        $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'];
+        $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug','Sep','Okt','Nov','Des'];
         $revenueTrend = [];
         
         foreach ($months as $index => $month) {
@@ -50,6 +52,56 @@ class DashboardController extends Controller
             // Konversi ke Miliar untuk grafik
             $revenueTrend[] = round($total / 1000000000, 1);
         }
+        
+        // 3. Revenue Trend Enroute per Hari (30 hari terakhir)
+        $endDate = Carbon::now();
+        $startDate = Carbon::now()->subDays(29); // 30 hari termasuk hari ini
+
+        $enrouteDailyRevenue = EnrouteData::select(
+                DB::raw('DATE(dof) as date'),
+                DB::raw('SUM(enroute_charge_idr) as total_revenue')
+            )
+            ->whereBetween('dof', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->groupBy(DB::raw('DATE(dof)'))
+            ->orderBy('date', 'asc')
+            ->get()
+            ->keyBy('date');
+
+        // Buat array untuk 30 hari dengan nilai default 0
+        $enrouteDailyLabels = [];
+        $enrouteDailyValues = [];
+
+        for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
+            $dateStr = $date->format('Y-m-d');
+            $enrouteDailyLabels[] = $date->format('d/m');
+            $enrouteDailyValues[] = $enrouteDailyRevenue[$dateStr]->total_revenue ?? 0;
+        }
+
+        // Konversi ke Miliar untuk grafik
+        $enrouteDailyChartValues = array_map(function($value) {
+            return round($value / 1000000000, 2); // Dalam Miliar
+        }, $enrouteDailyValues);
+
+        // Untuk Terminal
+        $terminalDailyRevenue = TerminalData::select(
+                DB::raw('DATE(tanggal) as date'),
+                DB::raw('SUM(biaya_terminal_idr) as total_revenue')
+            )
+            ->whereBetween('tanggal', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->groupBy(DB::raw('DATE(tanggal)'))
+            ->orderBy('date', 'asc')
+            ->get()
+            ->keyBy('date');
+
+        $terminalDailyValues = [];
+        for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
+            $dateStr = $date->format('Y-m-d');
+            $terminalDailyValues[] = $terminalDailyRevenue[$dateStr]->total_revenue ?? 0;
+        }
+
+        $terminalDailyChartValues = array_map(function($value) {
+            return round($value / 1000000000, 2);
+        }, $terminalDailyValues);
         
         // 4. Traffic Peak Window (distribusi per jam dengan filter)
         $hourlyTraffic = [];
@@ -221,13 +273,145 @@ class DashboardController extends Controller
         }
         
         // Misal ambil dari upload terakhir
-        $latestDate = EnrouteUpload::max('tanggal_akhir');
-        $period = $latestDate ? Carbon::parse($latestDate)->format('d M Y') : 'Aug 2026';
+        $latestDateenroute = EnrouteUpload::max('tanggal_akhir');
+        $periodenroute = $latestDateenroute ? Carbon::parse($latestDateenroute)->format('d M Y') : 'Aug 2026';
+
+        // ============================================
+        // DATA TERMINAL
+        // ============================================
+        
+        // 1. KPI Cards Terminal
+        $terminalMovement = TerminalData::count();
+        $terminalRevenueIdr = TerminalData::sum('biaya_terminal_idr') ?? 0;
+        $terminalServiceUnit = TerminalData::sum('parking_stand') ?? 0; // MTOW sebagai service unit
+        
+        // 2. Revenue Composition Terminal
+        $terminalIdrOriginal = TerminalData::where('currency', 'IDR')->sum('biaya_terminal') ?? 0;
+        $terminalUsdConverted = TerminalData::where('currency', 'USD')->sum('biaya_terminal_idr') ?? 0;
+        $terminalTotalSemua = $terminalIdrOriginal + $terminalUsdConverted;
+        
+        if ($terminalTotalSemua > 0) {
+            $terminalDomPercentage = round(($terminalIdrOriginal / $terminalTotalSemua) * 100, 1);
+            $terminalIntPercentage = round(($terminalUsdConverted / $terminalTotalSemua) * 100, 1);
+        } else {
+            $terminalDomPercentage = 0;
+            $terminalIntPercentage = 0;
+        }
+        
+        // 3. Revenue Trend Terminal per Bulan
+        $terminalRevenueTrend = [];
+        foreach ($months as $index => $month) {
+            $monthNumber = $index + 1;
+            $year = 2026;
+            
+            $total = TerminalData::whereYear('tanggal', $year)
+                ->whereMonth('tanggal', $monthNumber)
+                ->sum('biaya_terminal_idr') ?? 0;
+            
+            $terminalRevenueTrend[] = round($total / 1000000000, 1);
+        }
+        
+        // 4. Traffic Peak Window Terminal (berdasarkan waktu kedatangan)
+        $terminalHourlyTraffic = [];
+        for ($hour = 0; $hour < 24; $hour += 3) {
+            $startHour = str_pad($hour, 2, '0', STR_PAD_LEFT);
+            $endHour = str_pad($hour + 3, 2, '0', STR_PAD_LEFT);
+            
+            $count = TerminalData::whereNotNull('waktu_kedatangan')
+                ->whereTime('waktu_kedatangan', '>=', "{$startHour}:00:00")
+                ->whereTime('waktu_kedatangan', '<', "{$endHour}:00:00")
+                ->count();
+            
+            $terminalHourlyTraffic[] = $count;
+        }
+
+        $maxTerminalTraffic = max($terminalHourlyTraffic) ?: 1;
+        $terminalPeakHeights = array_map(function($val) use ($maxTerminalTraffic) {
+            return round(($val / $maxTerminalTraffic) * 100);
+        }, $terminalHourlyTraffic);
+        
+        if (max($terminalHourlyTraffic) > 0) {
+            $terminalPeakIndex = array_search(max($terminalHourlyTraffic), $terminalHourlyTraffic);
+            $terminalPeakStart = str_pad($terminalPeakIndex * 3, 2, '0', STR_PAD_LEFT) . ':00';
+            $terminalPeakEnd = str_pad(($terminalPeakIndex * 3) + 3, 2, '0', STR_PAD_LEFT) . ':00';
+        } else {
+            $terminalPeakStart = '08:00';
+            $terminalPeakEnd = '11:00';
+        }
+        
+        // 5. Terminal Aircraft Category Mix
+        $terminalHeavyCount = TerminalData::where(function($q) use ($heavyTypes) {
+            foreach ($heavyTypes as $type) {
+                $q->orWhere('type', 'LIKE', "{$type}%");
+            }
+        })->count();
+        
+        $terminalMediumCount = TerminalData::where(function($q) use ($mediumTypes) {
+            foreach ($mediumTypes as $type) {
+                $q->orWhere('type', 'LIKE', "{$type}%");
+            }
+        })->count();
+        
+        $terminalLightCount = TerminalData::count() - ($terminalHeavyCount + $terminalMediumCount);
+        $totalTerminalAircraft = TerminalData::count() ?: 1;
+        
+        $terminalHeavyPercentage = round(($terminalHeavyCount / $totalTerminalAircraft) * 100);
+        $terminalMediumPercentage = round(($terminalMediumCount / $totalTerminalAircraft) * 100);
+        $terminalLightPercentage = 100 - ($terminalHeavyPercentage + $terminalMediumPercentage);
+        
+        // 6. Top Airline Performance Terminal
+        $topTerminalAirlines = TerminalData::select(
+                'airline3_code',
+                DB::raw('COUNT(*) as flight_count'),
+                DB::raw('SUM(biaya_terminal_idr) as total_revenue')
+            )
+            ->whereNotNull('airline3_code')
+            ->groupBy('airline3_code')
+            ->orderBy('total_revenue', 'desc')
+            ->limit(5)
+            ->get();
+        
+        $topTerminalAirlinesData = [];
+        $totalTerminalFlights = TerminalData::count() ?: 1;
+        $totalTerminalRevenue = TerminalData::sum('biaya_terminal_idr') ?? 0;
+        
+        foreach ($topTerminalAirlines as $index => $item) {
+            $airline = Airline::where('airline3_code', $item->airline3_code)->first();
+            
+            $movementPct = round(($item->flight_count / $totalTerminalFlights) * 300);
+            $revenuePct = $totalTerminalRevenue > 0 ? round(($item->total_revenue / $totalTerminalRevenue) * 300) : 0;
+            
+            $topTerminalAirlinesData[] = [
+                'name' => $airline->airline_name ?? $item->airline3_code,
+                'flights' => $item->flight_count,
+                'revenue' => $this->formatRupiah($item->total_revenue),
+                'movement_pct' => $movementPct,
+                'revenue_pct' => $revenuePct,
+            ];
+        }
+        
+        // 7. Terminal Traffic per bulan
+        $terminalTrafficPerMonth = [];
+        foreach ($months as $index => $month) {
+            $monthNumber = $index + 1;
+            $year = 2026;
+            
+            $terminalCount = TerminalData::whereYear('tanggal', $year)
+                ->whereMonth('tanggal', $monthNumber)
+                ->count();
+            
+            $terminalTrafficPerMonth[] = $terminalCount;
+        }
+
+        // Misal ambil dari upload terakhir
+        $latestDateterminal = TerminalUpload::max('tanggal_akhir');
+        $periodterminal = $latestDateterminal ? Carbon::parse($latestDateterminal)->format('d M Y') : 'Aug 2026';
 
         // ============================================
         // PASS KE VIEW
         // ============================================
         return view('traffic', compact(
+            //Enroute
             'enrouteMovement',
             'totalRouteUnit',
             'totalRevenueIdr',
@@ -247,7 +431,24 @@ class DashboardController extends Controller
             'domesticPct',
             'topAirlinesMovement',
             'topRoutes',
-            'period'
+            'periodenroute',
+
+            // Terminal
+            'terminalMovement',
+            'terminalServiceUnit',
+            'terminalRevenueIdr',
+            'terminalDomPercentage',
+            'terminalIntPercentage',
+            'terminalRevenueTrend',
+            'terminalHourlyTraffic',
+            'terminalPeakHeights',
+            'terminalPeakStart',
+            'terminalPeakEnd',
+            'terminalHeavyPercentage',
+            'terminalMediumPercentage',
+            'terminalLightPercentage',
+            'topTerminalAirlinesData',
+            'terminalTrafficPerMonth'
         ));
     }
     

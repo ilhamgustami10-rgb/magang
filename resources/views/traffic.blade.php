@@ -234,7 +234,7 @@
                         Updated
                     </span>
                     <span class="inline-flex items-center bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
-                        {{ $period }}
+                        {{ $periodenroute }}
                     </span>
                 </div>
             </h2>
@@ -266,7 +266,7 @@
                         Enroute - Total of Route Unit
                     </p>
                     <p class="text-2xl font-bold text-slate-800 mt-1">
-                        {{ number_format($totalRouteUnit) }}
+                        {{ number_format($totalRouteUnit, 0, ',', '.') }}
                     </p>
                 </div>
 
@@ -452,8 +452,17 @@
     <section class="space-y-6">
         <p></p>
         <div class="mb-4">
-            <h2 class="text-2xl font-semibold text-slate-800">
-                🏢 Terminal Performance
+            <h2 class="flex items-center gap-3 text-2xl font-semibold text-slate-800">
+                Terminal Performance
+                <span class="hidden sm:block w-px h-5 bg-slate-300"></span>
+                <div class="inline-flex items-center gap-1">
+                    <span class="inline-flex items-center bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
+                        Updated
+                    </span>
+                    <span class="inline-flex items-center bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
+                        {{ $periodenroute }}
+                    </span>
+                </div>
             </h2>
             <div class="mt-2 h-1 w-16 bg-gradient-to-r from-emerald-600 to-green-100 rounded-full"></div>
         </div>
@@ -462,7 +471,7 @@
             <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Terminal Movement</p>
-                    <p class="text-3xl font-black text-slate-800 leading-none">5,234</p>
+                    <p class="text-3xl font-black text-slate-800 leading-none">{{ number_format($terminalMovement) }}</p>
                 </div>
                 <div class="h-11 w-11 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
@@ -473,8 +482,8 @@
 
             <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Terminal - Service Unit</p>
-                    <p class="text-2xl font-bold text-slate-800 mt-1">1,245,800</p>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Total MTOW</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1">{{ number_format($terminalServiceUnit, 0, ',', '.') }}</p>
                 </div>
                 <div class="h-11 w-11 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -486,7 +495,7 @@
             <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Terminal - Total Revenue</p>
-                    <p class="text-3xl font-black text-slate-800 leading-none">Rp 25,942,105,000</p>
+                    <p class="text-3xl font-black text-slate-800 leading-none">Rp {{ number_format($terminalRevenueIdr, 0, ',', '.') }}</p>
                 </div>
                 <div class="h-11 w-11 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -498,14 +507,19 @@
             <div class="bg-white rounded-2xl shadow p-6">
                 <h3 class="font-semibold mb-2 text-center text-slate-800">Revenue Composition</h3>
                 <div class="relative h-64 w-full"> 
-                    <canvas id="donutTerminal"></canvas>
+                    <canvas id="donutTerminal"
+                        data-dom="{{ $terminalDomPercentage ?? 0 }}" 
+                        data-int="{{ $terminalIntPercentage ?? 0 }}">
+                    </canvas>
                 </div>
             </div>
 
             <div class="bg-white rounded-2xl shadow p-6 md:col-span-2">
                 <h3 class="font-semibold mb-4 text-slate-800">Revenue Trend – Terminal</h3>
                 <div class="h-60">
-                    <canvas id="lineTerminal1"></canvas>
+                    <canvas id="lineTerminal" 
+                            data-trend="{{ json_encode($terminalRevenueTrend) }}">
+                    </canvas>
                 </div>
             </div> 
         </div>
@@ -516,12 +530,12 @@
                 <div class="mb-8">
                     <div class="flex items-center justify-between mb-4">
                         <h4 class="text-sm font-bold text-slate-800 uppercase tracking-tight">Terminal Peak Window</h4>
-                        <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md font-bold italic">Busiest Period</span>
+                        <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md font-bold italic">Busiest Period</span>
                     </div>
                     
                     <div class="flex items-end justify-between gap-1 h-24 mb-2">
                         @foreach([20, 35, 80, 100, 90, 60, 30, 25] as $height)
-                            <div class="bg-slate-100 hover:bg-emerald-500 w-full rounded-t-sm transition-all duration-300" style="height: {{ $height }}%"></div>
+                            <div class="bg-emerald-200 hover:bg-emerald-500 w-full rounded-t-sm transition-all duration-300" style="height: {{ $height }}%"></div>
                         @endforeach
                     </div>
                     <div class="flex justify-between text-[9px] font-bold text-slate-400">
@@ -592,39 +606,37 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
-                            @foreach([  
-                                ['GARUDA INDONESIA', 644, 'Rp 4.12B', 90, 85],
-                                ['SCOOT', 329, 'Rp 2.79B', 50, 70],
-                                ['AIR ASIA', 510, 'Rp 2.45B', 80, 55],
-                                ['LION AIR', 844, 'Rp 2.14B', 95, 45],
-                                ['JETSTAR', 210, 'Rp 1.80B', 30, 40],
-                            ] as $i => $row)
+                            @forelse($topTerminalAirlinesData as $i => $row)
                             <tr class="group hover:bg-emerald-50/30 transition-all">
                                 <td class="py-4 px-4 text-center">
                                     <span class="text-[11px] font-black text-slate-400 group-hover:text-emerald-600">0{{ $i+1 }}</span>
                                 </td>
                                 <td class="py-4 px-4 font-bold text-slate-700">
-                                    {{ $row[0] }}
-                                    <div class="text-[10px] font-medium text-slate-400">{{ number_format($row[1]) }} Flights</div>
+                                    {{ $row['name'] }}
+                                    <div class="text-[10px] font-medium text-slate-400">{{ number_format($row['flights']) }} Flights</div>
                                 </td>
                                 <td class="py-4 px-4">
                                     <div class="space-y-2">
                                         <div class="relative w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                            <div class="absolute top-0 left-0 bg-emerald-500 h-full rounded-full" style="width: {{ $row[3] }}%"></div>
+                                            <div class="absolute top-0 left-0 bg-emerald-500 h-full rounded-full" style="width: {{ $row['movement_pct'] }}%"></div>
                                         </div>
                                         <div class="relative w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                            <div class="absolute top-0 left-0 bg-teal-400 h-full rounded-full" style="width: {{ $row[4] }}%"></div>
+                                            <div class="absolute top-0 left-0 bg-teal-400 h-full rounded-full" style="width: {{ $row['revenue_pct'] }}%"></div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="py-4 px-4 text-right">
-                                    <div class="text-base font-black text-slate-900 leading-none">{{ $row[2] }}</div>
-                                    <span class="text-[9px] font-bold {{ $row[4] > $row[3] ? 'text-teal-600' : 'text-emerald-600' }} uppercase tracking-tighter">
-                                        {{ $row[4] > $row[3] ? 'High Yield' : 'High Volume' }}
+                                    <div class="text-base font-black text-slate-900 leading-none">{{ $row['revenue'] }}</div>
+                                    <span class="text-[9px] font-bold {{ $row['revenue_pct'] > $row['movement_pct'] ? 'text-teal-600' : 'text-emerald-600' }} uppercase tracking-tighter">
+                                        {{ $row['revenue_pct'] > $row['movement_pct'] ? 'High Yield' : 'High Volume' }}
                                     </span>
                                 </td>
                             </tr>
-                            @endforeach
+                            @empty
+                            <tr>
+                                <td colspan="4" class="py-8 text-center text-slate-400">Belum ada data terminal</td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -733,7 +745,8 @@ const trendData = JSON.parse(lineEl.dataset.trend);
 new Chart(lineEl, {
     type: 'line',
     data: {
-        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],
+        // labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Okt','Nov','Des'],
+        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'],
         datasets: [{
             data: trendData,
             borderWidth: 3,
@@ -747,23 +760,32 @@ new Chart(lineEl, {
 });
 
 // --- DONUT TERMINAL ---
-new Chart(document.getElementById('donutTerminal'), {
+
+const donutTl = document.getElementById('donutTerminal');
+const TdomValue = donutTl.dataset.dom ? parseFloat(donutTl.dataset.dom) : 0;
+const TintValue = donutTl.dataset.int ? parseFloat(donutTl.dataset.int) : 0;
+
+new Chart(donutTl, {
     type: 'doughnut',
     data: {
-        labels: ['Passenger','Cargo'],
+        labels: ['Domestic (IDR)', 'International (USD)'],
         datasets: [{
-            data: [72,28],
-            backgroundColor: ['#16a34a','#86efac']
+            data: [TdomValue, TintValue],
+            backgroundColor: ['#16a34a', '#86efac'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
         }]
     },
-    options: globalDonutOptions // Tadi di sini Anda salah tulis variabel
+    options: { ...globalDonutOptions, cutout: '55%' }
 });
+
 
 // --- LINE ENROUTE 2 ---
 new Chart(document.getElementById('lineEnroute2'), {
     type: 'line',
     data: {
-        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],
+        // labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Okt','Nov','Des'],
+        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'],
         datasets: [{
             data: [1.4, 1.6, 1.5, 1.7, 1.8, 1.6, 1.7, 1.9],
             borderWidth: 3,
@@ -776,30 +798,18 @@ new Chart(document.getElementById('lineEnroute2'), {
     options: lineOptions
 });
 
-// --- LINE ENROUTE ---
-new Chart(document.getElementById('lineEnroute'), {
-    type: 'line',
-    data: {
-        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],
-        datasets: [{
-            data: [1.4,1.6,1.5,1.7,1.8,1.6,1.7,1.9],
-            borderWidth: 3,
-            tension: 0.4,
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(30, 103, 238, 0.23)',
-            fill: true
-        }]
-    },
-    options: lineOptions
-});
 
 // --- LINE TERMINAL ---
-new Chart(document.getElementById('lineTerminal1'), {
+const lineTl = document.getElementById('lineTerminal');
+const trendDataT = JSON.parse(lineTl.dataset.trend);
+
+new Chart(lineTl, {
     type: 'line',
     data: {
-        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],
+        // labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Okt','Nov','Des'],
+        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'],
         datasets: [{
-            data: [1.2,1.3,1.4,1.3,1.5,1.4,1.6,1.5],
+            data: trendDataT,
             borderWidth: 3,
             tension: 0.4,
             borderColor: '#16a34a',
