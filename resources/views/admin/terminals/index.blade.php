@@ -381,9 +381,9 @@ class extends Component {
     <header class="flex justify-between items-center">
         <h1 class="text-3xl font-black text-slate-800 tracking-tight">
             @if($showDetail)
-                <button wire:click="backToUploads" class="mr-2 text-emerald-600 hover:text-emerald-800 transition">
+                <!-- <button wire:click="backToUploads" class="mr-2 text-emerald-600 hover:text-emerald-800 transition">
                     ←
-                </button>
+                </button> -->
                 Detail Upload Terminal: {{ $selectedUpload->file_name }}
             @else
                 Data Terminal Charge
