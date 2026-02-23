@@ -103,6 +103,34 @@ class DashboardController extends Controller
             return round($value / 1000000000, 2);
         }, $terminalDailyValues);
         
+
+        // Ambil data revenue per hari (SEMUA data, bukan hanya 30 hari)
+        $enrouteDailyRevenue = EnrouteData::select(
+                DB::raw('DATE(dof) as date'),
+                DB::raw('SUM(enroute_charge_idr) as total_revenue')
+            )
+            ->whereNotNull('dof')
+            ->groupBy(DB::raw('DATE(dof)'))
+            ->orderBy('date', 'asc')
+            ->get();
+
+        // Buat array untuk grafik
+        $enrouteDailyLabels = [];
+        $enrouteDailyChartValues = [];
+
+        foreach ($enrouteDailyRevenue as $item) {
+            // Format label: 24/01, 25/01, dst
+            $enrouteDailyLabels[] = Carbon::parse($item->date)->format('d/m');
+            // Nilai dalam Juta
+            $enrouteDailyChartValues[] = round($item->total_revenue / 1000000, 2);
+        }
+
+        // Jika tidak ada data, beri default
+        if (empty($enrouteDailyLabels)) {
+            $enrouteDailyLabels = ['Tidak ada data'];
+            $enrouteDailyChartValues = [0];
+        }
+
         // 4. Traffic Peak Window (distribusi per jam dengan filter)
         $hourlyTraffic = [];
         for ($hour = 0; $hour < 24; $hour += 3) {
@@ -311,6 +339,33 @@ class DashboardController extends Controller
             $terminalRevenueTrend[] = round($total / 1000000000, 1);
         }
         
+        // Ambil data revenue per hari dari Terminal
+        $terminalDailyRevenue = TerminalData::select(
+                DB::raw('DATE(tanggal) as date'),
+                DB::raw('SUM(biaya_terminal_idr) as total_revenue')
+            )
+            ->whereNotNull('tanggal')
+            ->groupBy(DB::raw('DATE(tanggal)'))
+            ->orderBy('date', 'asc')
+            ->get();
+
+        // Buat array untuk grafik Terminal
+        $terminalDailyLabels = [];
+        $terminalDailyChartValues = [];
+
+        foreach ($terminalDailyRevenue as $item) {
+            // Format label: 24/01, 25/01, dst
+            $terminalDailyLabels[] = Carbon::parse($item->date)->format('d/m');
+            // Nilai dalam Juta
+            $terminalDailyChartValues[] = round($item->total_revenue / 1000000, 2);
+        }
+
+        // Jika tidak ada data, beri default
+        if (empty($terminalDailyLabels)) {
+            $terminalDailyLabels = ['Tidak ada data'];
+            $terminalDailyChartValues = [0];
+        }
+
         // 4. Traffic Peak Window Terminal (berdasarkan waktu kedatangan)
         $terminalHourlyTraffic = [];
         for ($hour = 0; $hour < 24; $hour += 3) {
@@ -432,6 +487,8 @@ class DashboardController extends Controller
             'topAirlinesMovement',
             'topRoutes',
             'periodenroute',
+            'enrouteDailyLabels',
+            'enrouteDailyChartValues',
 
             // Terminal
             'terminalMovement',
@@ -448,7 +505,10 @@ class DashboardController extends Controller
             'terminalMediumPercentage',
             'terminalLightPercentage',
             'topTerminalAirlinesData',
-            'terminalTrafficPerMonth'
+            'terminalTrafficPerMonth',
+            'periodterminal',
+            'terminalDailyLabels',
+            'terminalDailyChartValues'
         ));
     }
     

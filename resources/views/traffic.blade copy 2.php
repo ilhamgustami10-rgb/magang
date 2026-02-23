@@ -40,7 +40,7 @@
                         </div>
                         <div>
                             <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Movement</p>
-                            <h3 class="text-3xl font-black text-slate-800 leading-none">-</h3>
+                            <h3 class="text-3xl font-black text-slate-800 leading-none">13,046</h3>
                             <p class="mt-2 text-xs text-slate-400 font-medium">Flights / Year</p>
                         </div>
                     </div>
@@ -51,10 +51,10 @@
                         </div>
                         <div>
                             <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Avg. Daily</p>
-                            <h3 class="text-3xl font-black text-slate-800 leading-none">-</h3>
+                            <h3 class="text-3xl font-black text-slate-800 leading-none">435</h3>
                             <div class="mt-2 flex items-center gap-1">
-                                <!-- <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">▲ 4.2%</span>
-                                <span class="text-[10px] text-slate-400 font-medium whitespace-nowrap">vs yesterday</span> -->
+                                <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">▲ 4.2%</span>
+                                <span class="text-[10px] text-slate-400 font-medium whitespace-nowrap">vs yesterday</span>
                             </div>
                         </div>
                     </div>
@@ -83,7 +83,7 @@
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             <!-- Row -->
-                            <!-- <tr>
+                            <tr>
                                 <td class="px-3 py-2">INDONESIA AIRASIA</td>
                                 <td class="px-3 py-2">
                                     <div class="w-full bg-slate-200 rounded h-3">
@@ -136,7 +136,7 @@
                                 </td>
                                 <td class="px-3 py-2 text-right font-medium">1,205</td>
                                 <td class="px-3 py-2 text-right text-slate-500">6.61%</td>
-                            </tr> -->
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -163,7 +163,7 @@
                         </thead>
 
                         <tbody class="divide-y divide-slate-100">
-                            <!-- <tr>
+                            <tr>
                                 <td class="px-3 py-2">WADD – WIII</td>
                                 <td class="px-3 py-2">
                                     <div class="w-full bg-slate-200 rounded h-3">
@@ -216,7 +216,7 @@
                                 </td>
                                 <td class="px-3 py-2 text-right font-medium">552</td>
                                 <td class="px-3 py-2 text-right text-slate-500">3.03%</td>
-                            </tr> -->
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -519,8 +519,7 @@
                 <h3 class="font-semibold mb-4 text-slate-800">Revenue Trend – Terminal</h3>
                 <div class="h-60">
                     <canvas id="lineTerminal" 
-                            data-labels="{{ json_encode($terminalDailyLabels) }}"
-                            data-values="{{ json_encode($terminalDailyChartValues) }}">
+                            data-trend="{{ json_encode($terminalRevenueTrend) }}">
                     </canvas>
                 </div>
             </div> 
@@ -627,19 +626,11 @@
                                         </div>
                                     </div>
                                 </td>
-                                <!-- <td class="py-4 px-4 text-right">
+                                <td class="py-4 px-4 text-right">
                                     <div class="text-base font-black text-slate-900 leading-none">{{ $row['revenue'] }}</div>
                                     <span class="text-[9px] font-bold {{ $row['revenue_pct'] > $row['movement_pct'] ? 'text-teal-600' : 'text-emerald-600' }} uppercase tracking-tighter">
                                         {{ $row['revenue_pct'] > $row['movement_pct'] ? 'High Yield' : 'High Volume' }}
                                     </span>
-                                </td> -->
-                                <td class="py-4 px-4 text-right">
-                                        <div class="text-base font-black text-slate-900 leading-none">{{ $row['revenue'] }}</div>
-                                    @if($row['revenue_pct'] > $row['movement_pct'])
-                                        <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-tighter">High Yield</span>
-                                    @else
-                                        <span class="text-[9px] font-bold text-blue-600 uppercase tracking-tighter">High Volume</span>
-                                    @endif
                                 </td>
                             </tr>
                             @empty
@@ -720,8 +711,7 @@ new Chart(document.getElementById('donutTraffic'), {
     data: {
         labels: ['International', 'Domestic'],
         datasets: [{
-            //data: [85, 15],
-            data: [],
+            data: [85, 15],
             backgroundColor: ['#ebac25','#fdea93'],
             borderWidth: 2,
             borderColor: '#ffffff'
@@ -820,6 +810,7 @@ if (lineEl) {
 }
 
 // --- DONUT TERMINAL ---
+
 const donutTl = document.getElementById('donutTerminal');
 const TdomValue = donutTl.dataset.dom ? parseFloat(donutTl.dataset.dom) : 0;
 const TintValue = donutTl.dataset.int ? parseFloat(donutTl.dataset.int) : 0;
@@ -830,7 +821,7 @@ new Chart(donutTl, {
         labels: ['Domestic (IDR)', 'International (USD)'],
         datasets: [{
             data: [TdomValue, TintValue],
-            backgroundColor: ['#16a34a','#86efac'],
+            backgroundColor: ['#16a34a', '#86efac'],
             borderWidth: 2,
             borderColor: '#ffffff'
         }]
@@ -839,15 +830,14 @@ new Chart(donutTl, {
 });
 
 
-// --- LINE TRAFFIC ---
+// --- LINE ENROUTE 2 ---
 new Chart(document.getElementById('lineEnroute2'), {
     type: 'line',
     data: {
         // labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Okt','Nov','Des'],
         labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'],
         datasets: [{
-            // data: [1.4, 1.6, 1.5, 1.7, 1.8, 1.6, 1.7, 1.9],
-            data: [],
+            data: [1.4, 1.6, 1.5, 1.7, 1.8, 1.6, 1.7, 1.9],
             borderWidth: 3,
             tension: 0.4,
             borderColor: '#ebac25',
@@ -859,53 +849,25 @@ new Chart(document.getElementById('lineEnroute2'), {
 });
 
 
-/// LINE TERMINAL (PER HARI)
-const lineTerminal = document.getElementById('lineTerminal');
-if (lineTerminal) {
-    const labels = JSON.parse(lineTerminal.dataset.labels || '[]');
-    const values = JSON.parse(lineTerminal.dataset.values || '[]');
-    
-    new Chart(lineTerminal, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: values,
-                borderWidth: 3,
-                tension: 0.4,
-                borderColor: '#16a34a',
-                backgroundColor: 'rgba(22, 163, 74, 0.12)',
-                fill: true,
-                pointRadius: 2,
-                pointHoverRadius: 5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { display: false }, 
-                datalabels: { display: false } 
-            },
-            scales: {
-                y: { 
-                    beginAtZero: true,
-                    ticks: { 
-                        callback: function(value) {
-                            return value + ' Jt';
-                        }
-                    }
-                },
-                x: {
-                    ticks: {
-                        maxTicksLimit: 15,
-                        maxRotation: 45,
-                        minRotation: 45
-                    }
-                }
-            }
-        }
-    });
-}
+// --- LINE TERMINAL ---
+const lineTl = document.getElementById('lineTerminal');
+const trendDataT = JSON.parse(lineTl.dataset.trend);
+
+new Chart(lineTl, {
+    type: 'line',
+    data: {
+        // labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Okt','Nov','Des'],
+        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'],
+        datasets: [{
+            data: trendDataT,
+            borderWidth: 3,
+            tension: 0.4,
+            borderColor: '#16a34a',
+            backgroundColor: 'rgba(30, 238, 40, 0.12)',
+            fill: true
+        }]
+    },
+    options: lineOptions
+});
 </script>
 </x-app-layout>
