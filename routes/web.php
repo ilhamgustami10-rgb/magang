@@ -45,6 +45,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Volt::route('airlines', 'admin.airlines.index')->name('airlines.index');
         Volt::route('/', 'admin.index')->name('index');
 
+        Volt::route('traffic', 'admin.traffic.index')->name('traffic.index');
+        Volt::route('/', 'admin.index')->name('index');
+        
         Volt::route('enroutes', 'admin.enroutes.index')->name('enroutes.index');
         Volt::route('/', 'admin.index')->name('index');
 

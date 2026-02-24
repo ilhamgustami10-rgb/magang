@@ -3,6 +3,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\TrafficUpload;
+use App\Models\TrafficData;
 use App\Models\EnrouteUpload;
 use App\Models\EnrouteData;
 use App\Models\TerminalUpload;
@@ -25,7 +27,12 @@ class DashboardController extends Controller
         $totalRevenueIdr = EnrouteData::sum('enroute_charge_idr') ?? 0;
         
         // 2. Revenue Composition (Sesuai rumus Anda)
+        $enctotalIdrOriginal = EnrouteData::where('currency', 'IDR')->sum('enroute_charge') ?? 0;
+        $enctotalUsdOriginal = EnrouteData::where('currency', 'USD')->sum('enroute_charge') ?? 0;
+        $enctotalUsdConverted = EnrouteData::where('currency', 'USD')->sum('enroute_charge_idr') ?? 0;
+        
         $totalIdrOriginal = EnrouteData::where('currency', 'IDR')->sum('enroute_charge') ?? 0;
+        $totalUsdOriginal = EnrouteData::where('currency', 'USD')->sum('enroute_charge') ?? 0;
         $totalUsdConverted = EnrouteData::where('currency', 'USD')->sum('enroute_charge_idr') ?? 0;
         $totalSemua = $totalIdrOriginal + $totalUsdConverted;
         
@@ -314,6 +321,10 @@ class DashboardController extends Controller
         $terminalServiceUnit = TerminalData::sum('parking_stand') ?? 0; // MTOW sebagai service unit
         
         // 2. Revenue Composition Terminal
+        $tnctotalIdrOriginal = TerminalData::where('currency', 'IDR')->sum('biaya_terminal') ?? 0;
+        $tnctotalUsdOriginal = TerminalData::where('currency', 'USD')->sum('biaya_terminal') ?? 0;
+        $tnctotalUsdConverted = TerminalData::where('currency', 'USD')->sum('biaya_terminal_idr') ?? 0;
+                
         $terminalIdrOriginal = TerminalData::where('currency', 'IDR')->sum('biaya_terminal') ?? 0;
         $terminalUsdConverted = TerminalData::where('currency', 'USD')->sum('biaya_terminal_idr') ?? 0;
         $terminalTotalSemua = $terminalIdrOriginal + $terminalUsdConverted;
@@ -462,6 +473,151 @@ class DashboardController extends Controller
         $latestDateterminal = TerminalUpload::max('tanggal_akhir');
         $periodterminal = $latestDateterminal ? Carbon::parse($latestDateterminal)->format('d M Y') : 'Aug 2026';
 
+
+        // ============================================
+        // DATA UNTUK TRAFFIC OVERVIEW
+        // ============================================
+        
+        $totalMovement = TrafficData::count();
+        // 1. Monthly Traffic Trend (Enroute + Terminal)
+        $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Des'];
+        $arrivalTrend = [];  // Kedatangan (Arrival)
+        $departureTrend = []; // Keberangkatan (Departure)
+        
+        foreach ($months as $index => $month) {
+            $monthNumber = $index + 1;
+            $year = 2026;
+            
+            // Arrival: data dengan ADES = bandara tujuan (misal WADD)
+            $arrival = TrafficData::whereYear('tanggal', $year)
+                ->whereMonth('tanggal', $monthNumber)
+                ->where('ades', 'LIKE', 'WADD%')
+                ->count();
+            
+            // Departure: data dengan ADEP = bandara asal (misal WADD)
+            $departure = TrafficData::whereYear('tanggal', $year)
+                ->whereMonth('tanggal', $monthNumber)
+                ->where('adep', 'LIKE', 'WADD%')
+                ->count();
+            
+            $arrivalTrend[] = $arrival;
+            $departureTrend[] = $departure;
+        }
+        
+        // 2. Traffic Movement Composition (International vs Domestic)
+        $internationalCount = TrafficData::where(function($q) {
+                $q->where('adep', 'NOT LIKE', 'W%')
+                  ->orWhere('ades', 'NOT LIKE', 'W%');
+            })->count();
+        
+        $domesticCount = TrafficData::where('adep', 'LIKE', 'W%')
+            ->where('ades', 'LIKE', 'W%')
+            ->count();
+        
+        $totalForDonut = $internationalCount + $domesticCount ?: 1;
+        $internationalPct = round(($internationalCount / $totalForDonut) * 100);
+        $domesticPct = 100 - $internationalPct;
+        
+        // 3. Traffic Peak Window (per 3 jam)
+        $hourlyTraffic = [];
+        for ($hour = 0; $hour < 24; $hour += 3) {
+            $startHour = str_pad($hour, 2, '0', STR_PAD_LEFT);
+            $endHour = str_pad($hour + 3, 2, '0', STR_PAD_LEFT);
+            
+            // Gunakan waktu keberangkatan (ATD) atau kedatangan (ATA)
+            $count = TrafficData::whereNotNull('atd')
+                ->whereTime('atd', '>=', "{$startHour}:00:00")
+                ->whereTime('atd', '<', "{$endHour}:00:00")
+                ->count();
+            
+            $hourlyTraffic[] = $count;
+        }
+        
+        $maxTraffic = max($hourlyTraffic) ?: 1;
+        $peakHeights = array_map(function($val) use ($maxTraffic) {
+            return round(($val / $maxTraffic) * 100);
+        }, $hourlyTraffic);
+        
+        if (max($hourlyTraffic) > 0) {
+            $peakIndex = array_search(max($hourlyTraffic), $hourlyTraffic);
+            $peakStart = str_pad($peakIndex * 3, 2, '0', STR_PAD_LEFT) . ':00';
+            $peakEnd = str_pad(($peakIndex * 3) + 3, 2, '0', STR_PAD_LEFT) . ':00';
+        } else {
+            $peakStart = '00:00';
+            $peakEnd = '03:00';
+        }
+        
+        // 4. Aircraft Category Mix
+        $heavyTypes = ['B77', 'B78', 'B74', 'A33', 'A34', 'A35', 'A38'];
+        $mediumTypes = ['B73', 'B75', 'B76', 'A31', 'A32', 'A20'];
+        
+        $heavyCount = TrafficData::where(function($q) use ($heavyTypes) {
+            foreach ($heavyTypes as $type) {
+                $q->orWhere('type', 'LIKE', "{$type}%");
+            }
+        })->count();
+        
+        $mediumCount = TrafficData::where(function($q) use ($mediumTypes) {
+            foreach ($mediumTypes as $type) {
+                $q->orWhere('type', 'LIKE', "{$type}%");
+            }
+        })->count();
+        
+        $lightCount = TrafficData::count() - ($heavyCount + $mediumCount);
+        $totalAircraft = TrafficData::count() ?: 1;
+        
+        $heavyPercentage = round(($heavyCount / $totalAircraft) * 100);
+        $mediumPercentage = round(($mediumCount / $totalAircraft) * 100);
+        $lightPercentage = 100 - ($heavyPercentage + $mediumPercentage);
+        
+        // 5. Top 5 Airlines by Movement
+        $topAirlines = TrafficData::select(
+                'airline3_code',
+                DB::raw('COUNT(*) as flight_count')
+            )
+            ->whereNotNull('airline3_code')
+            ->groupBy('airline3_code')
+            ->orderBy('flight_count', 'desc')
+            ->limit(7)
+            ->get()
+            ->map(function($item) use ($totalAircraft) {
+                $airline = Airline::where('airline3_code', $item->airline3_code)->first();
+                $percentage = round(($item->flight_count / $totalAircraft) * 100, 2);
+                $barWidth = round(($item->flight_count / $totalAircraft) * 100);
+                
+                return [
+                    'name' => $airline->airline_name ?? $item->airline3_code,
+                    'code' => $item->airline3_code,
+                    'count' => $item->flight_count,
+                    'percentage' => $percentage,
+                    'bar_width' => $barWidth,
+                ];
+            });
+        
+        // 6. Top 5 Flight Routes
+        $topRoutes = TrafficData::select(
+                'adep',
+                'ades',
+                DB::raw('COUNT(*) as route_count')
+            )
+            ->whereNotNull('adep')
+            ->whereNotNull('ades')
+            ->groupBy('adep', 'ades')
+            ->orderBy('route_count', 'desc')
+            ->limit(7)
+            ->get()
+            ->map(function($item) use ($totalAircraft) {
+                $percentage = round(($item->route_count / $totalAircraft) * 100, 2);
+                $barWidth = round(($item->route_count / $totalAircraft) * 100);
+                
+                return [
+                    'route' => $item->adep . ' – ' . $item->ades,
+                    'count' => $item->route_count,
+                    'percentage' => $percentage,
+                    'bar_width' => $barWidth,
+                ];
+            });
+
         // ============================================
         // PASS KE VIEW
         // ============================================
@@ -489,6 +645,9 @@ class DashboardController extends Controller
             'periodenroute',
             'enrouteDailyLabels',
             'enrouteDailyChartValues',
+            'enctotalIdrOriginal',
+            'enctotalUsdOriginal',
+            'enctotalUsdConverted',
 
             // Terminal
             'terminalMovement',
@@ -508,7 +667,25 @@ class DashboardController extends Controller
             'terminalTrafficPerMonth',
             'periodterminal',
             'terminalDailyLabels',
-            'terminalDailyChartValues'
+            'terminalDailyChartValues',
+            'tnctotalIdrOriginal',
+            'tnctotalUsdOriginal',
+            'tnctotalUsdConverted',
+
+            //Traffic
+            'arrivalTrend',
+            'departureTrend',
+            'internationalPct',
+            'domesticPct',
+            'peakHeights',
+            'peakStart',
+            'peakEnd',
+            'heavyPercentage',
+            'mediumPercentage',
+            'lightPercentage',
+            'topAirlines',
+            'topRoutes',
+            'totalMovement'
         ));
     }
     

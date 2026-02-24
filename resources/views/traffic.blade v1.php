@@ -6,7 +6,7 @@
                 Traffic Movement, Enroute & Terminal Overview
             </p>
         </div>
-        <div class="mb-4">  
+        <div class="mb-4">
             <h2 class="text-2xl font-semibold text-slate-800">
                 Flight Traffic Overview
             </h2>
@@ -15,107 +15,46 @@
 
         <!-- KPI + DONUT -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="bg-white rounded-[1.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 lg:col-span-2 relative overflow-hidden">
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <h3 class="text-lg font-black text-slate-800 tracking-tight uppercase">Monthly Traffic Trend</h3>
-                        <div class="h-0.5 w-10 bg-amber-500 mt-2 rounded-full"></div>
-                    </div>
-                    {{-- Custom Legend --}}
-                    <div class="flex gap-4">
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-[#ebac25]"></div>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase">Arrival</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-[#f97316]"></div>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase">Departure</span>
-                        </div>
-                    </div>
+            <div class="bg-white rounded-2xl shadow p-6 lg:col-span-2">
+                <h3 class="font-semibold mb-4 text-slate-800">Monthly Traffic Movement Trend</h3>
+                <div class="h-64">
+                    <canvas id="lineEnroute2"></canvas>
                 </div>
-                <!-- LINE CHART Traffic Trend -->
-                <div class="h-64 w-full">
-                    <canvas id="lineEnroute2" 
-                            data-arrival="{{ json_encode($arrivalTrend) }}"
-                            data-departure="{{ json_encode($departureTrend) }}">
-                    </canvas>
-                </div>
-            </div>
+            </div> 
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col items-center max-w-m">
-                <h3 class="font-bold mb-4 text-slate-800 text-lg">Traffic Movement Composition</h3>
-                
-                <div class="relative h-64 w-full mb-6">
-                    <canvas id="donutTraffic" 
-                            data-international="{{ $internationalPct }}" 
-                            data-domestic="{{ $domesticPct }}">
-                    </canvas>
-                </div>
-
-                <div class="w-full bg-orange-100 rounded-xl p-4 flex flex-col items-center">
-                    <span class="text-slate-800 text-xs uppercase tracking-widest font-semibold mb-1">Total Traffic</span>
-                    <div class="h-0.5 w-20 bg-orange-600 mx-auto mb-2 rounded-full"></div>
-                    <div class="flex items-baseline gap-2">
-                        <span class="text-3xl font-extrabold text-slate-900 leading-none">
-                           {{ number_format($totalMovement, 0, ',', '.') }}
-                        </span>
-                        <span class="text-sm font-medium text-slate-400 italic">Movements</span>
-                    </div>
+            <div class="bg-white rounded-2xl shadow p-6 flex flex-col">
+                <h3 class="font-semibold mb-4 text-center text-slate-800">Traffic Movement Composition</h3>
+                <div class="relative h-64 w-full"> 
+                    <canvas id="donutTraffic"></canvas>
                 </div>
             </div>
 
             <section class="space-y-8">
-                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 h-full flex flex-col">
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="text-sm font-bold text-slate-800 uppercase tracking-tight">Traffic Peak Window</h4>
-                            <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md font-bold italic">Busiest Period</span>
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl text-slate-800 tracking-tight">Traffic Statistics Overview</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex items-center gap-5 transition-all hover:shadow-md">
+                        <div class="h-14 w-14 rounded-2xl bg-orange-400 flex items-center justify-center text-white shadow-lg shadow-blue-100 shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                         </div>
-                        
-                        <div class="flex items-end justify-between gap-1 h-24 mb-2">
-                            @foreach($peakHeights as $height)
-                                <div class="bg-orange-100 hover:bg-orange-500 w-full rounded-t-sm transition-all duration-300" 
-                                    style="height: {{ $height }}%"></div>
-                            @endforeach
-                        </div>
-                        <div class="flex justify-between text-[9px] font-bold text-slate-400">
-                            <span>00:00</span>
-                            <span class="text-orange-600 font-black">PEAK: {{ $peakStart }} - {{ $peakEnd }}</span>
-                            <span>23:59</span>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Movement</p>
+                            <h3 class="text-3xl font-black text-slate-800 leading-none">-</h3>
+                            <p class="mt-2 text-xs text-slate-400 font-medium">Flights / Year</p>
                         </div>
                     </div>
 
-                    <div class="flex-grow">
-                        <h4 class="text-sm font-bold text-slate-800 uppercase mb-4">Aircraft Category Mix</h4>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex justify-between text-[10px] mb-1">
-                                    <span class="font-bold text-slate-600">HEAVY (B777, A350, etc)</span>
-                                    <span class="font-black text-slate-900">{{ $heavyPercentage }}%</span>
-                                </div>
-                                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-orange-600 h-full rounded-full" style="width: {{ $heavyPercentage }}%"></div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div class="flex justify-between text-[10px] mb-1">
-                                    <span class="font-bold text-slate-600">MEDIUM (B737, A320)</span>
-                                    <span class="font-black text-slate-900">{{ $mediumPercentage }}%</span>
-                                </div>
-                                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-yellow-400 h-full rounded-full" style="width: {{ $mediumPercentage }}%"></div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div class="flex justify-between text-[10px] mb-1">
-                                    <span class="font-bold text-slate-600">LIGHT / OTHERS</span>
-                                    <span class="font-black text-slate-900">{{ $lightPercentage }}%</span>
-                                </div>
-                                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-slate-300 h-full rounded-full" style="width: {{ $lightPercentage }}%"></div>
-                                </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex items-center gap-5 transition-all hover:shadow-md">
+                        <div class="h-14 w-14 rounded-2xl bg-orange-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100 shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Avg. Daily</p>
+                            <h3 class="text-3xl font-black text-slate-800 leading-none">-</h3>
+                            <div class="mt-2 flex items-center gap-1">
+                                <!-- <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">▲ 4.2%</span>
+                                <span class="text-[10px] text-slate-400 font-medium whitespace-nowrap">vs yesterday</span> -->
                             </div>
                         </div>
                     </div>
@@ -144,19 +83,60 @@
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             <!-- Row -->
-                            <!-- TOP Airlines Table -->
-                            @foreach($topAirlines as $index => $airline)
-                            <tr>
-                                <td class="px-3 py-2">{{ $airline['name'] }}</td>
+                            <!-- <tr>
+                                <td class="px-3 py-2">INDONESIA AIRASIA</td>
                                 <td class="px-3 py-2">
                                     <div class="w-full bg-slate-200 rounded h-3">
-                                        <div class="bg-orange-400 h-3 rounded" style="width: {{ $airline['bar_width'] }}%"></div>
+                                        <div class="bg-orange-400 h-3 rounded" style="width: 96%"></div>
                                     </div>
                                 </td>
-                                <td class="px-3 py-2 text-right font-medium">{{ number_format($airline['count']) }}</td>
-                                <td class="px-3 py-2 text-right text-slate-500">{{ $airline['percentage'] }}%</td>
+                                <td class="px-3 py-2 text-right font-medium">1,756</td>
+                                <td class="px-3 py-2 text-right text-slate-500">9.63%</td>
                             </tr>
-                            @endforeach
+
+                            <tr>
+                                <td class="px-3 py-2">GARUDA INDONESIA</td>
+                                <td class="px-3 py-2">
+                                    <div class="w-full bg-slate-200 rounded h-3">
+                                        <div class="bg-orange-400 h-3 rounded" style="width: 75%"></div>
+                                    </div>
+                                </td>
+                                <td class="px-3 py-2 text-right font-medium">1,366</td>
+                                <td class="px-3 py-2 text-right text-slate-500">7.49%</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-3 py-2">JETSTAR</td>
+                                <td class="px-3 py-2">
+                                    <div class="w-full bg-slate-200 rounded h-3">
+                                        <div class="bg-orange-400 h-3 rounded" style="width: 68%"></div>
+                                    </div>
+                                </td>
+                                <td class="px-3 py-2 text-right font-medium">1,247</td>
+                                <td class="px-3 py-2 text-right text-slate-500">6.84%</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-3 py-2">WINGS AIR</td>
+                                <td class="px-3 py-2">
+                                    <div class="w-full bg-slate-200 rounded h-3">
+                                        <div class="bg-orange-400 h-3 rounded" style="width: 66%"></div>
+                                    </div>
+                                </td>
+                                <td class="px-3 py-2 text-right font-medium">1,232</td>
+                                <td class="px-3 py-2 text-right text-slate-500">6.75%</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-3 py-2">BATIK AIR</td>
+                                <td class="px-3 py-2">
+                                    <div class="w-full bg-slate-200 rounded h-3">
+                                        <div class="bg-orange-400 h-3 rounded" style="width: 65%"></div>
+                                    </div>
+                                </td>
+                                <td class="px-3 py-2 text-right font-medium">1,205</td>
+                                <td class="px-3 py-2 text-right text-slate-500">6.61%</td>
+                            </tr> -->
                         </tbody>
                     </table>
                 </div>
@@ -183,30 +163,71 @@
                         </thead>
 
                         <tbody class="divide-y divide-slate-100">
-                            @foreach($topRoutes as $route)
-                            <tr>
-                                <td class="px-3 py-2">{{ $route['route'] }}</td>
+                            <!-- <tr>
+                                <td class="px-3 py-2">WADD – WIII</td>
                                 <td class="px-3 py-2">
                                     <div class="w-full bg-slate-200 rounded h-3">
-                                        <div class="bg-orange-400 h-3 rounded" style="width: {{ $route['bar_width'] }}%"></div>
+                                        <div class="bg-orange-400 h-3 rounded" style="width: 100%"></div>
                                     </div>
                                 </td>
-                                <td class="px-3 py-2 text-right font-medium">{{ number_format($route['count']) }}</td>
-                                <td class="px-3 py-2 text-right text-slate-500">{{ $route['percentage'] }}%</td>
+                                <td class="px-3 py-2 text-right font-medium">1,443</td>
+                                <td class="px-3 py-2 text-right text-slate-500">7.91%</td>
                             </tr>
-                            @endforeach
+
+                            <tr>
+                                <td class="px-3 py-2">WIII – WADD</td>
+                                <td class="px-3 py-2">
+                                    <div class="w-full bg-slate-200 rounded h-3">
+                                        <div class="bg-orange-400 h-3 rounded" style="width: 99%"></div>
+                                    </div>
+                                </td>
+                                <td class="px-3 py-2 text-right font-medium">1,439</td>
+                                <td class="px-3 py-2 text-right text-slate-500">7.89%</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-3 py-2">WADD – WSSS</td>
+                                <td class="px-3 py-2">
+                                    <div class="w-full bg-slate-200 rounded h-3">
+                                        <div class="bg-orange-400 h-3 rounded" style="width: 40%"></div>
+                                    </div>
+                                </td>
+                                <td class="px-3 py-2 text-right font-medium">581</td>
+                                <td class="px-3 py-2 text-right text-slate-500">3.19%</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-3 py-2">WSSS – WADD</td>
+                                <td class="px-3 py-2">
+                                    <div class="w-full bg-slate-200 rounded h-3">
+                                        <div class="bg-orange-400 h-3 rounded" style="width: 40%"></div>
+                                    </div>
+                                </td>
+                                <td class="px-3 py-2 text-right font-medium">580</td>
+                                <td class="px-3 py-2 text-right text-slate-500">3.18%</td>
+                            </tr>
+
+                            <tr>
+                                <td class="px-3 py-2">WMKK – WADD</td>
+                                <td class="px-3 py-2">
+                                    <div class="w-full bg-slate-200 rounded h-3">
+                                        <div class="bg-orange-400 h-3 rounded" style="width: 38%"></div>
+                                    </div>
+                                </td>
+                                <td class="px-3 py-2 text-right font-medium">552</td>
+                                <td class="px-3 py-2 text-right text-slate-500">3.03%</td>
+                            </tr> -->
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-        <p></p>
     </section>
     <!-- ========================= ENROUTE ========================= -->
     <section class="space-y-6">
         <div class="mb-4">
             <h2 class="flex items-center gap-3 text-2xl font-semibold text-slate-800">
-                <span>Enroute Revenue</span>
+                <span>Enroute Performance</span>
                 <span class="hidden sm:block w-px h-5 bg-slate-300"></span>
                <div class="inline-flex items-center gap-1">
                     <span class="inline-flex items-center bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
@@ -219,6 +240,7 @@
             </h2>
             <div class="mt-2 h-1 w-16 bg-gradient-to-r from-blue-600 to-sky-100 rounded-full"></div>
         </div>
+        
         <!-- KPI + DONUT -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
@@ -227,15 +249,17 @@
                         Enroute Movement
                     </p>
                     <p class="text-3xl font-black text-slate-800 leading-none">
-                        {{ number_format($enrouteMovement, 0, ',', '.') }}
+                        {{ number_format($enrouteMovement) }}
                     </p>
                 </div>
+
                 <div class="h-11 w-11 rounded-lg bg-sky-200 flex items-center justify-center text-blue-700">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                     </svg>
                 </div>
             </div>
+
             <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">
@@ -245,6 +269,7 @@
                         {{ number_format($totalRouteUnit, 0, ',', '.') }}
                     </p>
                 </div>
+
                 <div class="h-11 w-11 rounded-lg bg-sky-200 flex items-center justify-center text-blue-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
                         viewBox="0 0 24 24" stroke="currentColor">
@@ -253,6 +278,7 @@
                     </svg>
                 </div>
             </div>
+
             <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">
@@ -262,6 +288,7 @@
                         Rp {{ number_format($totalRevenueIdr, 0, ',', '.') }}
                     </p>
                 </div>
+
                 <div class="h-11 w-11 rounded-lg bg-sky-200 flex items-center justify-center text-blue-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
                         viewBox="0 0 24 24" stroke="currentColor">
@@ -272,81 +299,94 @@
                     </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-[1rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 relative overflow-hidden">
-                {{-- Header --}}
-                <div class="text-center relative z-10 mb-0"> {{-- Margin bottom dicabut --}}
-                    <h3 class="text-m font-black text-slate-800 tracking-tight uppercase">Revenue Enroute Composition</h3>
-                    <div class="h-0.5 w-12 bg-blue-600 mx-auto mt-2 rounded-full"></div>
-                </div>
-
-                {{-- Chart Container --}}
-                {{-- Kita gunakan minus margin atau padding 0 agar grafik lebih rapat --}}
-                <div class="relative h-60 w-full flex justify-center items-center group -mt-2 -mb-2"> 
+            
+            <div class="bg-white rounded-2xl shadow p-6">
+                <h3 class="font-semibold mb-2 text-center">Revenue Composition</h3>
+                <div class="relative h-64 w-full"> 
                     <canvas id="donutEnroute" 
                             data-dom="{{ $domPercentage ?? 0 }}" 
                             data-int="{{ $intPercentage ?? 0 }}">
                     </canvas>
-                    {{-- Center Text --}}
-                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.5em]">Total</span>
-                    </div>
-                </div>
-
-                {{-- Financial Details Section --}}
-                <div class="space-y-3 relative z-10">
-                    {{-- Row 1: IDR (Domestic) --}}
-                    <div class="flex items-center justify-between p-4 bg-slate-50/50 hover:bg-blue-50/50 border border-transparent hover:border-blue-100 rounded-[2rem] transition-all duration-300 group">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-xl bg-blue-600 shadow-lg shadow-blue-200 flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                <span class="font-bold text-sm tracking-tighter">Rp</span>
-                            </div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Revenue in IDR</p>
-                                <p class="text-base font-black text-slate-800 leading-tight">Rp {{ number_format($enctotalIdrOriginal ?? 0, 0, ',', '.') }}</p>
-                            </div>
-                        </div>
-                        {{-- Tambahan Persentase agar lebih informatif --}}
-                        <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase">{{ $domPercentage ?? 0 }}%</span>
-                    </div>
-
-                    {{-- Row 2: USD (International) --}}
-                    <div class="flex items-center justify-between p-4 bg-slate-50/50 hover:bg-sky-50/50 border border-transparent hover:border-sky-100 rounded-[2rem] transition-all duration-300 group">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-xl bg-sky-400 shadow-lg shadow-sky-100 flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                <span class="font-bold text-xl">$</span>
-                            </div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Revenue in USD</p>
-                                <p class="text-base font-black text-slate-800 leading-tight">$ {{ number_format($enctotalUsdOriginal ?? 0, 2, '.', ',') }}</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-[9px] font-bold text-sky-500 uppercase tracking-tighter">Equiv. to IDR</p>
-                            <p class="text-[11px] font-black text-slate-600">Rp {{ number_format($enctotalUsdConverted, 0, ',', '.') }}</p>
-                        </div>
-                    </div>
-
-                    {{-- Footer Info --}}
-                    <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                        <div class="flex items-center gap-2">
-                            <div class="w-2 h-2 rounded-full bg-slate-300 animate-pulse"></div>
-                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter italic">
-                                Rate: 1 USD = Rp {{ number_format($kurs ?? 16000, 0, ',', '.') }}
-                            </span>
-                        </div>
-                        <div class="flex items-center gap-1.5 opacity-60">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 00-2 2z" />
-                            </svg>
-                            <span class="text-[9px] font-bold text-slate-400 uppercase">
-                                {{ $recordDate ?? now()->format('d M Y') }}
-                            </span>
-                        </div>
-                    </div>
                 </div>
             </div>
 
             <div class="bg-white rounded-2xl shadow p-6 md:col-span-2">
+                <h3 class="font-semibold mb-4">Revenue Trend – Enroute</h3>
+                <div class="h-60">
+                    <canvas id="lineEnroute" 
+                            data-labels="{{ json_encode($enrouteDailyLabels) }}"
+                            data-values="{{ json_encode($enrouteDailyChartValues) }}">
+                    </canvas>
+                </div>
+            </div>  
+        </div>
+
+        <!-- TOP AIRLINE -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 h-full flex flex-col">
+                <div class="mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-sm font-bold text-slate-800 uppercase tracking-tight">Traffic Peak Window</h4>
+                        <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md font-bold italic">Busiest Period</span>
+                    </div>
+                    
+                    <div class="flex items-end justify-between gap-1 h-24 mb-2">
+                        @foreach($peakHeights as $height)
+                            <div class="bg-blue-200 hover:bg-blue-500 w-full rounded-t-sm transition-all duration-300" 
+                                style="height: {{ $height }}%"></div>
+                        @endforeach
+                    </div>
+                    <div class="flex justify-between text-[9px] font-bold text-slate-400">
+                        <span>00:00</span>
+                        <span class="text-blue-600 font-black">PEAK: {{ $peakStart }} - {{ $peakEnd }}</span>
+                        <span>23:59</span>
+                    </div>
+                </div>
+
+                <div class="flex-grow">
+                    <h4 class="text-sm font-bold text-slate-800 uppercase mb-4">Aircraft Category Mix</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <span class="font-bold text-slate-600">HEAVY (B777, A350, etc)</span>
+                                <span class="font-black text-slate-900">{{ $heavyPercentage }}%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-blue-600 h-full rounded-full" style="width: {{ $heavyPercentage }}%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <span class="font-bold text-slate-600">MEDIUM (B737, A320)</span>
+                                <span class="font-black text-slate-900">{{ $mediumPercentage }}%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-sky-400 h-full rounded-full" style="width: {{ $mediumPercentage }}%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <span class="font-bold text-slate-600">LIGHT / OTHERS</span>
+                                <span class="font-black text-slate-900">{{ $lightPercentage }}%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-slate-300 h-full rounded-full" style="width: {{ $lightPercentage }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-slate-50">
+                    <p class="text-[10px] text-slate-400 leading-relaxed italic">
+                        *High percentage of **Heavy Aircraft** correlates with the high revenue yield observed in Singapore Airlines & Qatar routes.
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 lg:col-span-2">
                 <div class="flex items-center justify-between mb-6">
                     <div>
                         <h3 class="font-bold text-lg text-slate-800">Top Airline – Enroute Performance</h3>
@@ -405,19 +445,6 @@
                         </tbody>
                     </table>
                 </div>
-            </div>  
-        </div>
-
-        <!-- TOP AIRLINE -->
-        <div class="grid grid-cols-1 gap-6"> 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 lg:col-span-2">
-                <h3 class="font-semibold mb-4">Revenue Trend – Enroute</h3>
-                <div class="h-60">
-                    <canvas id="lineEnroute" 
-                            data-labels="{{ json_encode($enrouteDailyLabels) }}"
-                            data-values="{{ json_encode($enrouteDailyChartValues) }}">
-                    </canvas>
-                </div>  
             </div>
         </div>
     </section>
@@ -427,20 +454,20 @@
         <p></p>
         <div class="mb-4">
             <h2 class="flex items-center gap-3 text-2xl font-semibold text-slate-800">
-                <span>Terminal Revenue</span>
+                Terminal Performance
                 <span class="hidden sm:block w-px h-5 bg-slate-300"></span>
-               <div class="inline-flex items-center gap-1">
+                <div class="inline-flex items-center gap-1">
                     <span class="inline-flex items-center bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
                         Updated
                     </span>
                     <span class="inline-flex items-center bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
-                        {{ $periodenroute }}
+                        {{ $periodterminal }}
                     </span>
                 </div>
             </h2>
             <div class="mt-2 h-1 w-16 bg-gradient-to-r from-emerald-600 to-green-100 rounded-full"></div>
         </div>
-        <!-- KPI + DONUT -->
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
                 <div>
@@ -478,75 +505,79 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-[1rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 relative overflow-hidden">
-                {{-- Header --}}
-                <div class="text-center relative z-10 mb-0"> {{-- Margin bottom dicabut --}}
-                    <h3 class="text-m font-black text-slate-800 tracking-tight uppercase">Revenue Terminal Composition</h3>
-                    <div class="h-0.5 w-12 bg-emerald-600 mx-auto mt-2 rounded-full"></div>
-                </div>
-
-                <div class="relative h-60 w-full flex justify-center items-center group -mt-2 -mb-2"> 
-                    <canvas id="donutTerminal" 
-                            data-dom="{{ $terminalDomPercentage ?? 0 }}" 
-                            data-int="{{ $terminalIntPercentage ?? 0 }}">
+            <div class="bg-white rounded-2xl shadow p-6">
+                <h3 class="font-semibold mb-2 text-center text-slate-800">Revenue Composition</h3>
+                <div class="relative h-64 w-full"> 
+                    <canvas id="donutTerminal"
+                        data-dom="{{ $terminalDomPercentage ?? 0 }}" 
+                        data-int="{{ $terminalIntPercentage ?? 0 }}">
                     </canvas>
-                    {{-- Center Text --}}
-                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.5em]">Total</span>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow p-6 md:col-span-2">
+                <h3 class="font-semibold mb-4 text-slate-800">Revenue Trend – Terminal</h3>
+                <div class="h-60">
+                    <canvas id="lineTerminal" 
+                            data-labels="{{ json_encode($terminalDailyLabels) }}"
+                            data-values="{{ json_encode($terminalDailyChartValues) }}">
+                    </canvas>
+                </div>
+            </div> 
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 h-full flex flex-col">
+                <div class="mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-sm font-bold text-slate-800 uppercase tracking-tight">Terminal Peak Window</h4>
+                        <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md font-bold italic">Busiest Period</span>
+                    </div>
+                    
+                    <div class="flex items-end justify-between gap-1 h-24 mb-2">
+                        @foreach([20, 35, 80, 100, 90, 60, 30, 25] as $height)
+                            <div class="bg-slate-200 hover:bg-emerald-500 w-full rounded-t-sm transition-all duration-300" style="height: {{ $height }}%"></div>
+                        @endforeach
+                    </div>
+                    <div class="flex justify-between text-[9px] font-bold text-slate-400">
+                        <span>00:00</span>
+                        <span class="text-emerald-600 font-black">PEAK: 08:00 - 11:00</span>
+                        <span>23:59</span>
                     </div>
                 </div>
 
-                {{-- Financial Details Section --}}
-                <div class="space-y-3 relative z-10">
-                    {{-- Row 1: IDR (Domestic) --}}
-                    <div class="flex items-center justify-between p-4 bg-slate-50/50 hover:bg-blue-50/50 border border-transparent hover:border-blue-100 rounded-[2rem] transition-all duration-300 group">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-xl bg-emerald-600 shadow-lg shadow-blue-200 flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                <span class="font-bold text-sm tracking-tighter">Rp</span>
+                <div class="flex-grow">
+                    <!-- <h4 class="text-sm font-bold text-slate-800 uppercase mb-4">Terminal Aircraft Mix</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <span class="font-bold text-slate-600">HEAVY</span>
+                                <span class="font-black text-slate-900">15%</span>
                             </div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Revenue in IDR</p>
-                                <p class="text-base font-black text-slate-800 leading-tight">Rp {{ number_format($tnctotalIdrOriginal ?? 0, 0, ',', '.') }}</p>
-                            </div>
-                        </div>
-                        {{-- Tambahan Persentase agar lebih informatif --}}
-                        <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase">{{ $domPercentage ?? 0 }}%</span>
-                    </div>
-
-                    {{-- Row 2: USD (International) --}}
-                    <div class="flex items-center justify-between p-4 bg-slate-50/50 hover:bg-sky-50/50 border border-transparent hover:border-sky-100 rounded-[2rem] transition-all duration-300 group">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-xl bg-emerald-400 shadow-lg shadow-sky-100 flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                <span class="font-bold text-xl">$</span>
-                            </div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Revenue in USD</p>
-                                <p class="text-base font-black text-slate-800 leading-tight">$ {{ number_format($tnctotalUsdOriginal ?? 0, 2, '.', ',') }}</p>
+                            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-emerald-600 h-full rounded-full" style="width: 15%"></div>
                             </div>
                         </div>
-                        <div class="text-right">
-                            <p class="text-[9px] font-bold text-sky-500 uppercase tracking-tighter">Equiv. to IDR</p>
-                            <p class="text-[11px] font-black text-slate-600">Rp {{ number_format($tnctotalUsdConverted, 0, ',', '.') }}</p>
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <span class="font-bold text-slate-600">MEDIUM</span>
+                                <span class="font-black text-slate-900">75%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-green-400 h-full rounded-full" style="width: 75%"></div>
+                            </div>
                         </div>
-                    </div>
-
-                    {{-- Footer Info --}}
-                    <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                        <div class="flex items-center gap-2">
-                            <div class="w-2 h-2 rounded-full bg-slate-300 animate-pulse"></div>
-                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter italic">
-                                Rate: 1 USD = Rp {{ number_format($kurs ?? 16000, 0, ',', '.') }}
-                            </span>
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <span class="font-bold text-slate-600">LIGHT</span>
+                                <span class="font-black text-slate-900">10%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-slate-300 h-full rounded-full" style="width: 10%"></div>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-1.5 opacity-60">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 00-2 2z" />
-                            </svg>
-                            <span class="text-[9px] font-bold text-slate-400 uppercase">
-                                {{ $recordDate ?? now()->format('d M Y') }}
-                            </span>
-                        </div>
-                    </div>
+                    </div> -->
                 </div>
             </div>
 
@@ -621,137 +652,131 @@
                 </div>
             </div>
         </div>
-
-        <!-- TOP AIRLINE -->
-        <div class="bg-white rounded-2xl shadow p-6 md:col-span-2">
-            <h3 class="font-semibold mb-4 text-slate-800">Revenue Trend – Terminal</h3>
-            <div class="h-60">
-                <canvas id="lineTerminal" 
-                        data-labels="{{ json_encode($terminalDailyLabels) }}"
-                        data-values="{{ json_encode($terminalDailyChartValues) }}">
-                </canvas>
-            </div>
-        </div> 
     </section>
-    
 </div>
 <!-- ========================= CHART SCRIPT ========================= -->
 <script>
-// 1. Registrasi Plugin
+// 1. Registrasi Plugin (Hanya satu kali)
 Chart.register(ChartDataLabels);
 
 const globalDonutOptions = {
     responsive: true,
-    maintainAspectRatio: false,
-    layout: { padding: 20 },
+    maintainAspectRatio: false, // Penting agar grafik mengikuti tinggi div
+    layout: { 
+        padding: 20 // Memberi ruang agar label tidak terpotong
+    },
     plugins: {
         legend: {
             position: 'bottom',
-            labels: { usePointStyle: true, padding: 20, font: { size: 12 } }
+            labels: { 
+                usePointStyle: true, 
+                padding: 20, // Jarak antar teks legend
+                font: { size: 12 } 
+            }
         },
         datalabels: {
-            color: (context) => context.dataIndex === 0 ? '#ffffff' : '#1e293b',
+            // Logika Warna Otomatis
+            color: (context) => {
+                const index = context.dataIndex;
+                // Jika International (gelap) -> Teks Putih
+                // Jika Domestic (terang) -> Teks Hitam/Abu gelap
+                return index === 0 ? '#ffffff' : '#1e293b';
+            },
             anchor: 'center',
             align: 'center',
-            font: { weight: 'bold', size: 14 },
+            font: { 
+                weight: 'bold', 
+                size: 14 
+            },
             formatter: (value, context) => {
-                let sum = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                return sum > 0 ? ((value / sum) * 100).toFixed(1) + "%" : "0%";
+                let sum = 0;
+                let dataArr = context.chart.data.datasets[0].data;
+                dataArr.map(data => { sum += data; });
+                return (value * 100 / sum).toFixed(1) + "%";
             }
         }
     }
 };
 
+// 3. Konfigurasi Global Line (Mematikan Datalabels agar muncul)
 const lineOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false }, datalabels: { display: false } },
+    plugins: { 
+        legend: { display: false },
+        datalabels: { display: false } 
+    },
     scales: {
-        y: { beginAtZero: true }
+        y: { 
+            beginAtZero: true,
+            ticks: { callback: v => v + 'M' } 
+        }
     }
 };
 
-// ==================== DONUT TRAFFIC ====================
-const donutTraffic = document.getElementById('donutTraffic');
-if (donutTraffic) {
-    new Chart(donutTraffic, {
-        type: 'doughnut',
-        data: {
-            labels: ['International', 'Domestic'],
-            datasets: [{
-                data: [
-                    donutTraffic.dataset.international ? parseFloat(donutTraffic.dataset.international) : 0,
-                    donutTraffic.dataset.domestic ? parseFloat(donutTraffic.dataset.domestic) : 0
-                ],
-                backgroundColor: ['#ebac25', '#fdea93'],
-                borderWidth: 2,
-                borderColor: '#ffffff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '45%',
-            plugins: {
-                legend: { position: 'bottom' },
-                datalabels: {
-                    color: '#1e293b',
-                    formatter: (value) => value + '%'
-                }
-            }
-        }
-    });
-}
+// --- DONUT TRAFFIC ---
+new Chart(document.getElementById('donutTraffic'), {
+    type: 'doughnut',
+    data: {
+        labels: ['International', 'Domestic'],
+        datasets: [{
+            //data: [85, 15],
+            data: [],
+            backgroundColor: ['#ebac25','#fdea93'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+        }]
+    },
+    options: { ...globalDonutOptions, cutout: '45%' }
+});
 
-// ==================== DONUT ENROUTE ====================
-const donutEnroute = document.getElementById('donutEnroute');
-if (donutEnroute) {
-    const domValue = donutEnroute.dataset.dom ? parseFloat(donutEnroute.dataset.dom) : 0;
-    const intValue = donutEnroute.dataset.int ? parseFloat(donutEnroute.dataset.int) : 0;
+// DONUT ENROUTE
+const donutEl = document.getElementById('donutEnroute');
+const domValue = donutEl.dataset.dom ? parseFloat(donutEl.dataset.dom) : 0;
+const intValue = donutEl.dataset.int ? parseFloat(donutEl.dataset.int) : 0;
 
-    new Chart(donutEnroute, {
-        type: 'doughnut',
-        data: {
-            labels: ['Domestic (IDR)', 'International (USD)'],
-            datasets: [{
-                data: [domValue, intValue],
-                backgroundColor: ['#2563eb', '#93c5fd'],
-                borderWidth: 2,
-                borderColor: '#ffffff'
-            }]
-        },
-        options: { ...globalDonutOptions, cutout: '55%' }
-    });
-}
+new Chart(donutEl, {
+    type: 'doughnut',
+    data: {
+        labels: ['Domestic (IDR)', 'International (USD)'],
+        datasets: [{
+            data: [domValue, intValue],
+            backgroundColor: ['#2563eb', '#93c5fd'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+        }]
+    },
+    options: { ...globalDonutOptions, cutout: '55%' }
+});
 
-// ==================== DONUT TERMINAL ====================
-const donutTerminal = document.getElementById('donutTerminal');
-if (donutTerminal) {
-    const domValue = donutTerminal.dataset.dom ? parseFloat(donutTerminal.dataset.dom) : 0;
-    const intValue = donutTerminal.dataset.int ? parseFloat(donutTerminal.dataset.int) : 0;
+/// LINE ENROUTE
+// const lineEl = document.getElementById('lineEnroute');
+// const trendData = JSON.parse(lineEl.dataset.trend);
 
-    new Chart(donutTerminal, {
-        type: 'doughnut',
-        data: {
-            labels: ['Domestic (IDR)', 'International (USD)'],
-            datasets: [{
-                data: [domValue, intValue],
-                backgroundColor: ['#16a34a', '#86efac'],
-                borderWidth: 2,
-                borderColor: '#ffffff'
-            }]
-        },
-        options: { ...globalDonutOptions, cutout: '55%' }
-    });
-}
+// new Chart(lineEl, {
+//     type: 'line',
+//     data: {
+//         // labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Okt','Nov','Des'],
+//         labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'],
+//         datasets: [{
+//             data: trendData,
+//             borderWidth: 3,
+//             tension: 0.4,
+//             borderColor: '#2563eb',
+//             backgroundColor: 'rgba(30, 103, 238, 0.23)',
+//             fill: true
+//         }]
+//     },
+//     options: lineOptions
+// });
 
-// ==================== LINE ENROUTE (PER HARI) ====================
-const lineEnroute = document.getElementById('lineEnroute');
-if (lineEnroute) {
-    const labels = JSON.parse(lineEnroute.dataset.labels || '[]');
-    const values = JSON.parse(lineEnroute.dataset.values || '[]');
+/// LINE ENROUTE (PER HARI)
+const lineEl = document.getElementById('lineEnroute');
+if (lineEl) {
+    const labels = JSON.parse(lineEl.dataset.labels || '[]');
+    const values = JSON.parse(lineEl.dataset.values || '[]');
     
-    new Chart(lineEnroute, {
+    new Chart(lineEl, {
         type: 'line',
         data: {
             labels: labels,
@@ -776,11 +801,15 @@ if (lineEnroute) {
             scales: {
                 y: { 
                     beginAtZero: true,
-                    ticks: { callback: function(value) { return value + ' Jt'; } }
+                    ticks: { 
+                        callback: function(value) {
+                            return value + ' Jt'; // Tetap dalam Miliar
+                        }
+                    }
                 },
                 x: {
                     ticks: {
-                        maxTicksLimit: 15,
+                        maxTicksLimit: 15, // Maksimal 15 label
                         maxRotation: 45,
                         minRotation: 45
                     }
@@ -790,7 +819,47 @@ if (lineEnroute) {
     });
 }
 
-// ==================== LINE TERMINAL (PER HARI) ====================
+// --- DONUT TERMINAL ---
+const donutTl = document.getElementById('donutTerminal');
+const TdomValue = donutTl.dataset.dom ? parseFloat(donutTl.dataset.dom) : 0;
+const TintValue = donutTl.dataset.int ? parseFloat(donutTl.dataset.int) : 0;
+
+new Chart(donutTl, {
+    type: 'doughnut',
+    data: {
+        labels: ['Domestic (IDR)', 'International (USD)'],
+        datasets: [{
+            data: [TdomValue, TintValue],
+            backgroundColor: ['#16a34a','#86efac'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+        }]
+    },
+    options: { ...globalDonutOptions, cutout: '55%' }
+});
+
+
+// --- LINE TRAFFIC ---
+new Chart(document.getElementById('lineEnroute2'), {
+    type: 'line',
+    data: {
+        // labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Okt','Nov','Des'],
+        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'],
+        datasets: [{
+            // data: [1.4, 1.6, 1.5, 1.7, 1.8, 1.6, 1.7, 1.9],
+            data: [],
+            borderWidth: 3,
+            tension: 0.4,
+            borderColor: '#ebac25',
+            backgroundColor: 'rgba(235, 172, 37, 0.1)',
+            fill: true
+        }]
+    },
+    options: lineOptions
+});
+
+
+/// LINE TERMINAL (PER HARI)
 const lineTerminal = document.getElementById('lineTerminal');
 if (lineTerminal) {
     const labels = JSON.parse(lineTerminal.dataset.labels || '[]');
@@ -821,7 +890,11 @@ if (lineTerminal) {
             scales: {
                 y: { 
                     beginAtZero: true,
-                    ticks: { callback: function(value) { return value + ' Jt'; } }
+                    ticks: { 
+                        callback: function(value) {
+                            return value + ' Jt';
+                        }
+                    }
                 },
                 x: {
                     ticks: {
@@ -829,75 +902,6 @@ if (lineTerminal) {
                         maxRotation: 45,
                         minRotation: 45
                     }
-                }
-            }
-        }
-    });
-}
-
-// ==================== LINE TRAFFIC (Arrival vs Departure) ====================
-const lineTraffic = document.getElementById('lineEnroute2');  // Ganti ke lineEnroute2
-if (lineTraffic) {
-    const arrivalData = JSON.parse(lineTraffic.dataset.arrival || '[]');
-    const departureData = JSON.parse(lineTraffic.dataset.departure || '[]');
-    
-    new Chart(lineTraffic, {
-        type: 'line',
-        data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Des'],
-            datasets: [
-                {
-                    label: 'Arrival',
-                    data: arrivalData,
-                    borderColor: '#ebac25',
-                    backgroundColor: 'rgba(235, 172, 37, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: '#ebac25',
-                    pointBorderColor: '#ffffff',
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                },
-                {
-                    label: 'Departure',
-                    data: departureData,
-                    borderColor: '#f97316',
-                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: '#f97316',
-                    pointBorderColor: '#ffffff',
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                datalabels: { display: false },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    backgroundColor: '#1e293b'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(226, 232, 240, 0.6)' },
-                    ticks: { 
-                        callback: function(value) { return value + ' flights'; },
-                        color: '#64748b'
-                    }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#64748b' }
                 }
             }
         }
