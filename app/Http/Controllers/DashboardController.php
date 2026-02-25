@@ -26,7 +26,7 @@ class DashboardController extends Controller
         $totalRouteUnit = EnrouteData::sum('route_unit') ?? 0;
         $totalRevenueIdr = EnrouteData::sum('enroute_charge_idr') ?? 0;
         
-        // 2. Revenue Composition (Sesuai rumus Anda)
+        // 2. Revenue Composition
         $enctotalIdrOriginal = EnrouteData::where('currency', 'IDR')->sum('enroute_charge') ?? 0;
         $enctotalUsdOriginal = EnrouteData::where('currency', 'USD')->sum('enroute_charge') ?? 0;
         $enctotalUsdConverted = EnrouteData::where('currency', 'USD')->sum('enroute_charge_idr') ?? 0;
@@ -44,74 +44,7 @@ class DashboardController extends Controller
             $intPercentage = 0;
         }
         
-        // 3. Revenue Trend per Bulan (Jan-Agu 2026)
-        $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug','Sep','Okt','Nov','Des'];
-        $revenueTrend = [];
-        
-        foreach ($months as $index => $month) {
-            $monthNumber = $index + 1;
-            $year = 2026;
-            
-            $total = EnrouteData::whereYear('dof', $year)
-                ->whereMonth('dof', $monthNumber)
-                ->sum('enroute_charge_idr') ?? 0;
-            
-            // Konversi ke Miliar untuk grafik
-            $revenueTrend[] = round($total / 1000000000, 1);
-        }
-        
-        // 3. Revenue Trend Enroute per Hari (30 hari terakhir)
-        $endDate = Carbon::now();
-        $startDate = Carbon::now()->subDays(29); // 30 hari termasuk hari ini
-
-        $enrouteDailyRevenue = EnrouteData::select(
-                DB::raw('DATE(dof) as date'),
-                DB::raw('SUM(enroute_charge_idr) as total_revenue')
-            )
-            ->whereBetween('dof', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-            ->groupBy(DB::raw('DATE(dof)'))
-            ->orderBy('date', 'asc')
-            ->get()
-            ->keyBy('date');
-
-        // Buat array untuk 30 hari dengan nilai default 0
-        $enrouteDailyLabels = [];
-        $enrouteDailyValues = [];
-
-        for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
-            $dateStr = $date->format('Y-m-d');
-            $enrouteDailyLabels[] = $date->format('d/m');
-            $enrouteDailyValues[] = $enrouteDailyRevenue[$dateStr]->total_revenue ?? 0;
-        }
-
-        // Konversi ke Miliar untuk grafik
-        $enrouteDailyChartValues = array_map(function($value) {
-            return round($value / 1000000000, 2); // Dalam Miliar
-        }, $enrouteDailyValues);
-
-        // Untuk Terminal
-        $terminalDailyRevenue = TerminalData::select(
-                DB::raw('DATE(tanggal) as date'),
-                DB::raw('SUM(biaya_terminal_idr) as total_revenue')
-            )
-            ->whereBetween('tanggal', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-            ->groupBy(DB::raw('DATE(tanggal)'))
-            ->orderBy('date', 'asc')
-            ->get()
-            ->keyBy('date');
-
-        $terminalDailyValues = [];
-        for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
-            $dateStr = $date->format('Y-m-d');
-            $terminalDailyValues[] = $terminalDailyRevenue[$dateStr]->total_revenue ?? 0;
-        }
-
-        $terminalDailyChartValues = array_map(function($value) {
-            return round($value / 1000000000, 2);
-        }, $terminalDailyValues);
-        
-
-        // Ambil data revenue per hari (SEMUA data, bukan hanya 30 hari)
+        // 3. Revenue Trend Enroute per Hari (SEMUA DATA)
         $enrouteDailyRevenue = EnrouteData::select(
                 DB::raw('DATE(dof) as date'),
                 DB::raw('SUM(enroute_charge_idr) as total_revenue')
@@ -126,51 +59,39 @@ class DashboardController extends Controller
         $enrouteDailyChartValues = [];
 
         foreach ($enrouteDailyRevenue as $item) {
-            // Format label: 24/01, 25/01, dst
             $enrouteDailyLabels[] = Carbon::parse($item->date)->format('d/m');
-            // Nilai dalam Juta
             $enrouteDailyChartValues[] = round($item->total_revenue / 1000000, 2);
         }
 
-        // Jika tidak ada data, beri default
         if (empty($enrouteDailyLabels)) {
             $enrouteDailyLabels = ['Tidak ada data'];
             $enrouteDailyChartValues = [0];
         }
-
-        // 4. Traffic Peak Window (distribusi per jam dengan filter)
-        $hourlyTraffic = [];
+        
+        // 4. Traffic Peak Window Enroute
+        $enrouteHourlyTraffic = [];
         for ($hour = 0; $hour < 24; $hour += 3) {
             $startHour = str_pad($hour, 2, '0', STR_PAD_LEFT);
             $endHour = str_pad($hour + 3, 2, '0', STR_PAD_LEFT);
             
-            // Hitung hanya yang time_in valid (bukan '00:00:00' default)
             $count = EnrouteData::whereNotNull('time_in')
                 ->where('time_in', '!=', '00:00:00')
                 ->whereTime('time_in', '>=', "{$startHour}:00:00")
                 ->whereTime('time_in', '<', "{$endHour}:00:00")
                 ->count();
             
-            $hourlyTraffic[] = $count;
+            $enrouteHourlyTraffic[] = $count;
         }
 
-        // Log untuk debug
-        \Log::info('Hourly traffic distribution:', $hourlyTraffic);
-        
-        // Hitung total data dengan time_in valid
-        $totalValidTime = array_sum($hourlyTraffic);
-        \Log::info("Total data dengan time_in valid: " . $totalValidTime);
-        \Log::info("Total seluruh data: " . EnrouteData::count());
-        
         // Normalize untuk tinggi bar (0-100%)
-        $maxTraffic = max($hourlyTraffic) ?: 1;
+        $maxTraffic = max($enrouteHourlyTraffic) ?: 1;
         $peakHeights = array_map(function($val) use ($maxTraffic) {
             return round(($val / $maxTraffic) * 100);
-        }, $hourlyTraffic);
+        }, $enrouteHourlyTraffic);
         
-        // Cari jam peak (hanya jika ada data)
-        if (max($hourlyTraffic) > 0) {
-            $peakIndex = array_search(max($hourlyTraffic), $hourlyTraffic);
+        // Cari jam peak
+        if (max($enrouteHourlyTraffic) > 0) {
+            $peakIndex = array_search(max($enrouteHourlyTraffic), $enrouteHourlyTraffic);
             $peakStart = str_pad($peakIndex * 3, 2, '0', STR_PAD_LEFT) . ':00';
             $peakEnd = str_pad(($peakIndex * 3) + 3, 2, '0', STR_PAD_LEFT) . ':00';
         } else {
@@ -220,8 +141,8 @@ class DashboardController extends Controller
         foreach ($topAirlines as $index => $item) {
             $airline = Airline::where('airline3_code', $item->airline3_code)->first();
             
-            $movementPct = round(($item->flight_count / $totalFlights) * 300);
-            $revenuePct = $totalRevenue > 0 ? round(($item->total_revenue / $totalRevenue) * 300) : 0;
+            $movementPct = round(($item->flight_count / $totalFlights) * 100);
+            $revenuePct = $totalRevenue > 0 ? round(($item->total_revenue / $totalRevenue) * 100) : 0;
             
             $topAirlinesData[] = [
                 'name' => $airline->airline_name ?? $item->airline3_code,
@@ -232,55 +153,7 @@ class DashboardController extends Controller
             ];
         }
         
-        // 7. Top Airlines by Movement (untuk tabel di bagian Traffic Overview)
-        $topAirlinesMovement = EnrouteData::select(
-                'airline3_code',
-                DB::raw('COUNT(*) as flight_count')
-            )
-            ->whereNotNull('airline3_code')
-            ->groupBy('airline3_code')
-            ->orderBy('flight_count', 'desc')
-            ->limit(5)
-            ->get()
-            ->map(function($item) use ($totalFlights) {
-                $airline = Airline::where('airline3_code', $item->airline3_code)->first();
-                $percentage = round(($item->flight_count / $totalFlights) * 100, 2);
-                $barWidth = round(($item->flight_count / $totalFlights) * 100);
-                
-                return [
-                    'name' => $airline->airline_name ?? $item->airline3_code,
-                    'code' => $item->airline3_code,
-                    'count' => $item->flight_count,
-                    'percentage' => $percentage,
-                    'bar_width' => $barWidth,
-                ];
-            });
-        
-        // 8. Top 5 Flight Routes
-        $topRoutes = EnrouteData::select(
-                'adep',
-                'ades',
-                DB::raw('COUNT(*) as route_count')
-            )
-            ->whereNotNull('adep')
-            ->whereNotNull('ades')
-            ->groupBy('adep', 'ades')
-            ->orderBy('route_count', 'desc')
-            ->limit(5)
-            ->get()
-            ->map(function($item) use ($totalFlights) {
-                $percentage = round(($item->route_count / $totalFlights) * 100, 2);
-                $barWidth = round(($item->route_count / $totalFlights) * 100);
-                
-                return [
-                    'route' => $item->adep . ' – ' . $item->ades,
-                    'count' => $item->route_count,
-                    'percentage' => $percentage,
-                    'bar_width' => $barWidth,
-                ];
-            });
-        
-        // 9. International vs Domestic untuk donut traffic
+        // 7. International vs Domestic untuk donut traffic
         $internationalCount = EnrouteData::where(function($q) {
                 $q->where('adep', 'NOT LIKE', 'W%')
                   ->orWhere('ades', 'NOT LIKE', 'W%');
@@ -294,20 +167,7 @@ class DashboardController extends Controller
         $internationalPct = round(($internationalCount / $totalForDonut) * 100);
         $domesticPct = 100 - $internationalPct;
         
-        // 10. Traffic per bulan (untuk line chart di Traffic Overview)
-        $trafficPerMonth = [];
-        foreach ($months as $index => $month) {
-            $monthNumber = $index + 1;
-            $year = 2026;
-            
-            $enrouteCount = EnrouteData::whereYear('dof', $year)
-                ->whereMonth('dof', $monthNumber)
-                ->count();
-            
-            $trafficPerMonth[] = $enrouteCount;
-        }
-        
-        // Misal ambil dari upload terakhir
+        // Period Enroute
         $latestDateenroute = EnrouteUpload::max('tanggal_akhir');
         $periodenroute = $latestDateenroute ? Carbon::parse($latestDateenroute)->format('d M Y') : 'Aug 2026';
 
@@ -318,7 +178,7 @@ class DashboardController extends Controller
         // 1. KPI Cards Terminal
         $terminalMovement = TerminalData::count();
         $terminalRevenueIdr = TerminalData::sum('biaya_terminal_idr') ?? 0;
-        $terminalServiceUnit = TerminalData::sum('parking_stand') ?? 0; // MTOW sebagai service unit
+        $terminalServiceUnit = TerminalData::sum('parking_stand') ?? 0;
         
         // 2. Revenue Composition Terminal
         $tnctotalIdrOriginal = TerminalData::where('currency', 'IDR')->sum('biaya_terminal') ?? 0;
@@ -337,20 +197,7 @@ class DashboardController extends Controller
             $terminalIntPercentage = 0;
         }
         
-        // 3. Revenue Trend Terminal per Bulan
-        $terminalRevenueTrend = [];
-        foreach ($months as $index => $month) {
-            $monthNumber = $index + 1;
-            $year = 2026;
-            
-            $total = TerminalData::whereYear('tanggal', $year)
-                ->whereMonth('tanggal', $monthNumber)
-                ->sum('biaya_terminal_idr') ?? 0;
-            
-            $terminalRevenueTrend[] = round($total / 1000000000, 1);
-        }
-        
-        // Ambil data revenue per hari dari Terminal
+        // 3. Revenue Trend Terminal per Hari (SEMUA DATA)
         $terminalDailyRevenue = TerminalData::select(
                 DB::raw('DATE(tanggal) as date'),
                 DB::raw('SUM(biaya_terminal_idr) as total_revenue')
@@ -360,24 +207,20 @@ class DashboardController extends Controller
             ->orderBy('date', 'asc')
             ->get();
 
-        // Buat array untuk grafik Terminal
         $terminalDailyLabels = [];
         $terminalDailyChartValues = [];
 
         foreach ($terminalDailyRevenue as $item) {
-            // Format label: 24/01, 25/01, dst
             $terminalDailyLabels[] = Carbon::parse($item->date)->format('d/m');
-            // Nilai dalam Juta
             $terminalDailyChartValues[] = round($item->total_revenue / 1000000, 2);
         }
 
-        // Jika tidak ada data, beri default
         if (empty($terminalDailyLabels)) {
             $terminalDailyLabels = ['Tidak ada data'];
             $terminalDailyChartValues = [0];
         }
 
-        // 4. Traffic Peak Window Terminal (berdasarkan waktu kedatangan)
+        // 4. Traffic Peak Window Terminal
         $terminalHourlyTraffic = [];
         for ($hour = 0; $hour < 24; $hour += 3) {
             $startHour = str_pad($hour, 2, '0', STR_PAD_LEFT);
@@ -444,8 +287,8 @@ class DashboardController extends Controller
         foreach ($topTerminalAirlines as $index => $item) {
             $airline = Airline::where('airline3_code', $item->airline3_code)->first();
             
-            $movementPct = round(($item->flight_count / $totalTerminalFlights) * 300);
-            $revenuePct = $totalTerminalRevenue > 0 ? round(($item->total_revenue / $totalTerminalRevenue) * 300) : 0;
+            $movementPct = round(($item->flight_count / $totalTerminalFlights) * 100);
+            $revenuePct = $totalTerminalRevenue > 0 ? round(($item->total_revenue / $totalTerminalRevenue) * 100) : 0;
             
             $topTerminalAirlinesData[] = [
                 'name' => $airline->airline_name ?? $item->airline3_code,
@@ -455,24 +298,10 @@ class DashboardController extends Controller
                 'revenue_pct' => $revenuePct,
             ];
         }
-        
-        // 7. Terminal Traffic per bulan
-        $terminalTrafficPerMonth = [];
-        foreach ($months as $index => $month) {
-            $monthNumber = $index + 1;
-            $year = 2026;
-            
-            $terminalCount = TerminalData::whereYear('tanggal', $year)
-                ->whereMonth('tanggal', $monthNumber)
-                ->count();
-            
-            $terminalTrafficPerMonth[] = $terminalCount;
-        }
 
-        // Misal ambil dari upload terakhir
+        // Period Terminal
         $latestDateterminal = TerminalUpload::max('tanggal_akhir');
         $periodterminal = $latestDateterminal ? Carbon::parse($latestDateterminal)->format('d M Y') : 'Aug 2026';
-
 
         // ============================================
         // DATA UNTUK TRAFFIC OVERVIEW
@@ -480,7 +309,7 @@ class DashboardController extends Controller
         
         $totalMovement = TrafficData::count();
 
-        // 1. Monthly Traffic Trend (Enroute + Terminal)
+        // 1. Monthly Traffic Trend - 12 BULAN TERAKHIR (TANPA BATASAN TAHUN)
         $latestDate = TrafficData::max('tanggal');
         $endDate = $latestDate ? Carbon::parse($latestDate) : Carbon::now();
         $startDate = $endDate->copy()->subMonths(11)->startOfMonth();
@@ -502,10 +331,11 @@ class DashboardController extends Controller
         $monthlyStats = TrafficData::select(
                 DB::raw('YEAR(tanggal) as tahun'),
                 DB::raw('MONTH(tanggal) as bulan'),
-                DB::raw('SUM(CASE WHEN ades LIKE "WADD%" THEN 1 ELSE 0 END) as arrival'),
-                DB::raw('SUM(CASE WHEN adep LIKE "WADD%" THEN 1 ELSE 0 END) as departure')
+                DB::raw('SUM(CASE WHEN dep_arr_lcl = "A" THEN 1 ELSE 0 END) as arrival'),
+                DB::raw('SUM(CASE WHEN dep_arr_lcl = "D" THEN 1 ELSE 0 END) as departure')
             )
             ->whereNotNull('tanggal')
+            ->whereNotNull('dep_arr_lcl')
             ->whereBetween('tanggal', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
             ->groupBy('tahun', 'bulan')
             ->orderBy('tahun')
@@ -523,7 +353,7 @@ class DashboardController extends Controller
         foreach ($periods as $period) {
             $key = $period['year'] . '-' . str_pad($period['month'], 2, '0', STR_PAD_LEFT);
             
-            $chartLabels[] = $period['label']; // 'Mar 26', 'Apr 26'
+            $chartLabels[] = $period['label'];
             $arrivalTrend[] = isset($monthlyStats[$key]) ? (int)$monthlyStats[$key]->arrival : 0;
             $departureTrend[] = isset($monthlyStats[$key]) ? (int)$monthlyStats[$key]->departure : 0;
         }
@@ -543,83 +373,83 @@ class DashboardController extends Controller
         $domesticPct = 100 - $internationalPct;
         
         // 3. Traffic Peak Window (per 3 jam)
-        $hourlyTraffic = [];
+        $trafficHourlyTraffic = [];
         for ($hour = 0; $hour < 24; $hour += 3) {
             $startHour = str_pad($hour, 2, '0', STR_PAD_LEFT);
             $endHour = str_pad($hour + 3, 2, '0', STR_PAD_LEFT);
             
-            // Gunakan waktu keberangkatan (ATD) atau kedatangan (ATA)
             $count = TrafficData::whereNotNull('atd')
                 ->whereTime('atd', '>=', "{$startHour}:00:00")
                 ->whereTime('atd', '<', "{$endHour}:00:00")
                 ->count();
             
-            $hourlyTraffic[] = $count;
+            $trafficHourlyTraffic[] = $count;
         }
         
-        $maxTraffic = max($hourlyTraffic) ?: 1;
-        $peakHeights = array_map(function($val) use ($maxTraffic) {
+        $maxTraffic = max($trafficHourlyTraffic) ?: 1;
+        $trafficPeakHeights = array_map(function($val) use ($maxTraffic) {
             return round(($val / $maxTraffic) * 100);
-        }, $hourlyTraffic);
+        }, $trafficHourlyTraffic);
         
-        if (max($hourlyTraffic) > 0) {
-            $peakIndex = array_search(max($hourlyTraffic), $hourlyTraffic);
-            $peakStart = str_pad($peakIndex * 3, 2, '0', STR_PAD_LEFT) . ':00';
-            $peakEnd = str_pad(($peakIndex * 3) + 3, 2, '0', STR_PAD_LEFT) . ':00';
+        if (max($trafficHourlyTraffic) > 0) {
+            $peakIndex = array_search(max($trafficHourlyTraffic), $trafficHourlyTraffic);
+            $trafficPeakStart = str_pad($peakIndex * 3, 2, '0', STR_PAD_LEFT) . ':00';
+            $trafficPeakEnd = str_pad(($peakIndex * 3) + 3, 2, '0', STR_PAD_LEFT) . ':00';
         } else {
-            $peakStart = '00:00';
-            $peakEnd = '03:00';
+            $trafficPeakStart = '00:00';
+            $trafficPeakEnd = '03:00';
         }
         
-        // 4. Aircraft Category Mix
-        $heavyTypes = ['B77', 'B78', 'B74', 'A33', 'A34', 'A35', 'A38'];
-        $mediumTypes = ['B73', 'B75', 'B76', 'A31', 'A32', 'A20'];
-        
-        $heavyCount = TrafficData::where(function($q) use ($heavyTypes) {
+        // 4. Aircraft Category Mix untuk Traffic
+        $trafficHeavyCount = TrafficData::where(function($q) use ($heavyTypes) {
             foreach ($heavyTypes as $type) {
                 $q->orWhere('type', 'LIKE', "{$type}%");
             }
         })->count();
         
-        $mediumCount = TrafficData::where(function($q) use ($mediumTypes) {
+        $trafficMediumCount = TrafficData::where(function($q) use ($mediumTypes) {
             foreach ($mediumTypes as $type) {
                 $q->orWhere('type', 'LIKE', "{$type}%");
             }
         })->count();
         
-        $lightCount = TrafficData::count() - ($heavyCount + $mediumCount);
-        $totalAircraft = TrafficData::count() ?: 1;
+        $trafficLightCount = TrafficData::count() - ($trafficHeavyCount + $trafficMediumCount);
+        $totalTrafficAircraft = TrafficData::count() ?: 1;
         
-        $heavyPercentage = round(($heavyCount / $totalAircraft) * 100);
-        $mediumPercentage = round(($mediumCount / $totalAircraft) * 100);
-        $lightPercentage = 100 - ($heavyPercentage + $mediumPercentage);
+        $trafficHeavyPercentage = round(($trafficHeavyCount / $totalTrafficAircraft) * 100);
+        $trafficMediumPercentage = round(($trafficMediumCount / $totalTrafficAircraft) * 100);
+        $trafficLightPercentage = 100 - ($trafficHeavyPercentage + $trafficMediumPercentage);
         
-        // 5. Top 5 Airlines by Movement
-        $topAirlines = TrafficData::select(
+        // 5. Top 5 Airlines by Movement (Traffic)
+        $topTrafficAirlines = TrafficData::select(
                 'airline3_code',
-                DB::raw('COUNT(*) as flight_count')
+                DB::raw('COUNT(*) as flight_count'),
+                DB::raw('SUM(CASE WHEN dep_arr_lcl = "A" THEN 1 ELSE 0 END) as arrival_count'),
+                DB::raw('SUM(CASE WHEN dep_arr_lcl = "D" THEN 1 ELSE 0 END) as departure_count')
             )
             ->whereNotNull('airline3_code')
             ->groupBy('airline3_code')
             ->orderBy('flight_count', 'desc')
             ->limit(7)
             ->get()
-            ->map(function($item) use ($totalAircraft) {
+            ->map(function($item) use ($totalMovement) {
                 $airline = Airline::where('airline3_code', $item->airline3_code)->first();
-                $percentage = round(($item->flight_count / $totalAircraft) * 100, 2);
-                $barWidth = round(($item->flight_count / $totalAircraft) * 100);
+                $percentage = $totalMovement > 0 ? round(($item->flight_count / $totalMovement) * 100, 2) : 0;
+                $barWidth = $totalMovement > 0 ? round(($item->flight_count / $totalMovement) * 100) : 0;
                 
                 return [
                     'name' => $airline->airline_name ?? $item->airline3_code,
                     'code' => $item->airline3_code,
                     'count' => $item->flight_count,
+                    'arrival' => $item->arrival_count,
+                    'departure' => $item->departure_count,
                     'percentage' => $percentage,
                     'bar_width' => $barWidth,
                 ];
             });
         
         // 6. Top 5 Flight Routes
-        $topRoutes = TrafficData::select(
+        $topTrafficRoutes = TrafficData::select(
                 'adep',
                 'ades',
                 DB::raw('COUNT(*) as route_count')
@@ -630,9 +460,9 @@ class DashboardController extends Controller
             ->orderBy('route_count', 'desc')
             ->limit(7)
             ->get()
-            ->map(function($item) use ($totalAircraft) {
-                $percentage = round(($item->route_count / $totalAircraft) * 100, 2);
-                $barWidth = round(($item->route_count / $totalAircraft) * 100);
+            ->map(function($item) use ($totalMovement) {
+                $percentage = $totalMovement > 0 ? round(($item->route_count / $totalMovement) * 100, 2) : 0;
+                $barWidth = $totalMovement > 0 ? round(($item->route_count / $totalMovement) * 100) : 0;
                 
                 return [
                     'route' => $item->adep . ' – ' . $item->ades,
@@ -646,14 +476,13 @@ class DashboardController extends Controller
         // PASS KE VIEW
         // ============================================
         return view('traffic', compact(
-            //Enroute
+            // Enroute
             'enrouteMovement',
             'totalRouteUnit',
             'totalRevenueIdr',
             'domPercentage',
             'intPercentage',
-            'revenueTrend',
-            'hourlyTraffic',
+            'enrouteHourlyTraffic',
             'peakHeights',
             'peakStart',
             'peakEnd',
@@ -661,11 +490,8 @@ class DashboardController extends Controller
             'mediumPercentage',
             'lightPercentage',
             'topAirlinesData',
-            'trafficPerMonth',
             'internationalPct',
             'domesticPct',
-            'topAirlinesMovement',
-            'topRoutes',
             'periodenroute',
             'enrouteDailyLabels',
             'enrouteDailyChartValues',
@@ -679,7 +505,6 @@ class DashboardController extends Controller
             'terminalRevenueIdr',
             'terminalDomPercentage',
             'terminalIntPercentage',
-            'terminalRevenueTrend',
             'terminalHourlyTraffic',
             'terminalPeakHeights',
             'terminalPeakStart',
@@ -688,7 +513,6 @@ class DashboardController extends Controller
             'terminalMediumPercentage',
             'terminalLightPercentage',
             'topTerminalAirlinesData',
-            'terminalTrafficPerMonth',
             'periodterminal',
             'terminalDailyLabels',
             'terminalDailyChartValues',
@@ -696,21 +520,20 @@ class DashboardController extends Controller
             'tnctotalUsdOriginal',
             'tnctotalUsdConverted',
 
-            //Traffic
+            // Traffic
+            'totalMovement',
+            'chartLabels',
             'arrivalTrend',
             'departureTrend',
-            'internationalPct',
-            'domesticPct',
-            'peakHeights',
-            'peakStart',
-            'peakEnd',
-            'heavyPercentage',
-            'mediumPercentage',
-            'lightPercentage',
-            'topAirlines',
-            'topRoutes',
-            'totalMovement',
-            'chartLabels'
+            'trafficHeavyPercentage',
+            'trafficMediumPercentage',
+            'trafficLightPercentage',
+            'topTrafficAirlines',
+            'topTrafficRoutes',
+            'trafficPeakHeights',
+            'trafficPeakStart',
+            'trafficPeakEnd',
+            'trafficHourlyTraffic'
         ));
     }
     

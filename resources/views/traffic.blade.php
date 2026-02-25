@@ -146,7 +146,7 @@
                         <tbody class="divide-y divide-slate-100">
                             <!-- Row -->
                             <!-- TOP Airlines Table -->
-                            @foreach($topAirlines as $index => $airline)
+                            @foreach($topTrafficAirlines as $index => $airline)
                             <tr>
                                 <td class="px-3 py-2">{{ $airline['name'] }}</td>
                                 <td class="px-3 py-2">
@@ -184,7 +184,7 @@
                         </thead>
 
                         <tbody class="divide-y divide-slate-100">
-                            @foreach($topRoutes as $route)
+                            @foreach($topTrafficRoutes as $route)
                             <tr>
                                 <td class="px-3 py-2">{{ $route['route'] }}</td>
                                 <td class="px-3 py-2">
