@@ -479,29 +479,53 @@ class DashboardController extends Controller
         // ============================================
         
         $totalMovement = TrafficData::count();
+
         // 1. Monthly Traffic Trend (Enroute + Terminal)
-        $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Des'];
-        $arrivalTrend = [];  // Kedatangan (Arrival)
-        $departureTrend = []; // Keberangkatan (Departure)
-        
-        foreach ($months as $index => $month) {
-            $monthNumber = $index + 1;
-            $year = 2026;
+        $latestDate = TrafficData::max('tanggal');
+        $endDate = $latestDate ? Carbon::parse($latestDate) : Carbon::now();
+        $startDate = $endDate->copy()->subMonths(11)->startOfMonth();
+
+        // Buat array periode 12 bulan
+        $periods = [];
+        $currentDate = $startDate->copy();
+
+        for ($i = 0; $i < 12; $i++) {
+            $periods[] = [
+                'year' => $currentDate->year,
+                'month' => $currentDate->month,
+                'label' => $currentDate->format('M y'), // 'Mar 26', 'Apr 26'
+            ];
+            $currentDate->addMonth();
+        }
+
+        // Ambil data agregat per bulan
+        $monthlyStats = TrafficData::select(
+                DB::raw('YEAR(tanggal) as tahun'),
+                DB::raw('MONTH(tanggal) as bulan'),
+                DB::raw('SUM(CASE WHEN ades LIKE "WADD%" THEN 1 ELSE 0 END) as arrival'),
+                DB::raw('SUM(CASE WHEN adep LIKE "WADD%" THEN 1 ELSE 0 END) as departure')
+            )
+            ->whereNotNull('tanggal')
+            ->whereBetween('tanggal', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->groupBy('tahun', 'bulan')
+            ->orderBy('tahun')
+            ->orderBy('bulan')
+            ->get()
+            ->keyBy(function($item) {
+                return $item->tahun . '-' . str_pad($item->bulan, 2, '0', STR_PAD_LEFT);
+            });
+
+        // Inisialisasi array untuk grafik
+        $chartLabels = [];
+        $arrivalTrend = [];
+        $departureTrend = [];
+
+        foreach ($periods as $period) {
+            $key = $period['year'] . '-' . str_pad($period['month'], 2, '0', STR_PAD_LEFT);
             
-            // Arrival: data dengan ADES = bandara tujuan (misal WADD)
-            $arrival = TrafficData::whereYear('tanggal', $year)
-                ->whereMonth('tanggal', $monthNumber)
-                ->where('ades', 'LIKE', 'WADD%')
-                ->count();
-            
-            // Departure: data dengan ADEP = bandara asal (misal WADD)
-            $departure = TrafficData::whereYear('tanggal', $year)
-                ->whereMonth('tanggal', $monthNumber)
-                ->where('adep', 'LIKE', 'WADD%')
-                ->count();
-            
-            $arrivalTrend[] = $arrival;
-            $departureTrend[] = $departure;
+            $chartLabels[] = $period['label']; // 'Mar 26', 'Apr 26'
+            $arrivalTrend[] = isset($monthlyStats[$key]) ? (int)$monthlyStats[$key]->arrival : 0;
+            $departureTrend[] = isset($monthlyStats[$key]) ? (int)$monthlyStats[$key]->departure : 0;
         }
         
         // 2. Traffic Movement Composition (International vs Domestic)
@@ -685,7 +709,8 @@ class DashboardController extends Controller
             'lightPercentage',
             'topAirlines',
             'topRoutes',
-            'totalMovement'
+            'totalMovement',
+            'chartLabels'
         ));
     }
     

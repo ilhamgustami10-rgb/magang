@@ -35,11 +35,12 @@
                 </div>
                 <!-- LINE CHART Traffic Trend -->
                 <div class="h-64 w-full">
-                    <canvas id="lineEnroute2" 
-                            data-arrival="{{ json_encode($arrivalTrend) }}"
-                            data-departure="{{ json_encode($departureTrend) }}">
-                    </canvas>
-                </div>
+    <canvas id="lineEnroute2" 
+            data-labels="{{ json_encode($chartLabels) }}"
+            data-arrival="{{ json_encode($arrivalTrend) }}"
+            data-departure="{{ json_encode($departureTrend) }}">
+    </canvas>
+</div>
             </div>
 
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col items-center max-w-m">
@@ -127,7 +128,7 @@
                 <!-- Header -->
                 <div class="flex items-center justify-between mb-4">
                     <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                        Top 5 Airlines by Flight Movement
+                        Top Airlines by Flight Movement
                     </p>
                 </div>
 
@@ -166,7 +167,7 @@
                 <!-- Header -->
                 <div class="flex items-center justify-between mb-4">
                     <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                        Top 5 Flight Route by Movement
+                        Top Flight Route by Movement
                     </p>
                 </div>
 
@@ -836,15 +837,16 @@ if (lineTerminal) {
 }
 
 // ==================== LINE TRAFFIC (Arrival vs Departure) ====================
-const lineTraffic = document.getElementById('lineEnroute2');  // Ganti ke lineEnroute2
+const lineTraffic = document.getElementById('lineEnroute2');
 if (lineTraffic) {
     const arrivalData = JSON.parse(lineTraffic.dataset.arrival || '[]');
     const departureData = JSON.parse(lineTraffic.dataset.departure || '[]');
+    const labels = JSON.parse(lineTraffic.dataset.labels || '[]'); // TAMBAHKAN INI
     
     new Chart(lineTraffic, {
         type: 'line',
         data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Des'],
+            labels: labels, // Gunakan labels dinamis dari controller
             datasets: [
                 {
                     label: 'Arrival',
@@ -883,7 +885,12 @@ if (lineTraffic) {
                 tooltip: {
                     mode: 'index',
                     intersect: false,
-                    backgroundColor: '#1e293b'
+                    backgroundColor: '#1e293b',
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.raw + ' flights';
+                        }
+                    }
                 }
             },
             scales: {
@@ -891,13 +898,19 @@ if (lineTraffic) {
                     beginAtZero: true,
                     grid: { color: 'rgba(226, 232, 240, 0.6)' },
                     ticks: { 
-                        callback: function(value) { return value + ' flights'; },
+                        callback: function(value) { 
+                            return value.toLocaleString() + ' flights'; 
+                        },
                         color: '#64748b'
                     }
                 },
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#64748b' }
+                    ticks: { 
+                        color: '#64748b',
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
                 }
             }
         }
