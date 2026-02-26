@@ -34,7 +34,7 @@
                     </div>
                 </div>
                 <!-- LINE CHART Traffic Trend -->
-                <div class="relative h-[calc(80%)]">
+                <div class="relative h-[calc(95%-60px)]">
                     <canvas id="lineEnroute2" 
                             data-labels="{{ json_encode($chartLabels) }}"
                             data-arrival="{{ json_encode($arrivalTrend) }}"
