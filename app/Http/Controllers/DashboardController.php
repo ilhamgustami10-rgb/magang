@@ -141,8 +141,8 @@ class DashboardController extends Controller
         foreach ($topAirlines as $index => $item) {
             $airline = Airline::where('airline3_code', $item->airline3_code)->first();
             
-            $movementPct = round(($item->flight_count / $totalFlights) * 100);
-            $revenuePct = $totalRevenue > 0 ? round(($item->total_revenue / $totalRevenue) * 100) : 0;
+            $movementPct = round(($item->flight_count / $totalFlights) * 350);
+            $revenuePct = $totalRevenue > 0 ? round(($item->total_revenue / $totalRevenue) * 350) : 0;
             
             $topAirlinesData[] = [
                 'name' => $airline->airline_name ?? $item->airline3_code,
@@ -287,8 +287,8 @@ class DashboardController extends Controller
         foreach ($topTerminalAirlines as $index => $item) {
             $airline = Airline::where('airline3_code', $item->airline3_code)->first();
             
-            $movementPct = round(($item->flight_count / $totalTerminalFlights) * 100);
-            $revenuePct = $totalTerminalRevenue > 0 ? round(($item->total_revenue / $totalTerminalRevenue) * 100) : 0;
+            $movementPct = round(($item->flight_count / $totalTerminalFlights) * 350);
+            $revenuePct = $totalTerminalRevenue > 0 ? round(($item->total_revenue / $totalTerminalRevenue) * 350) : 0;
             
             $topTerminalAirlinesData[] = [
                 'name' => $airline->airline_name ?? $item->airline3_code,

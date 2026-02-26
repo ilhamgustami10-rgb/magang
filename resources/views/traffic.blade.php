@@ -34,7 +34,7 @@
                     </div>
                 </div>
                 <!-- LINE CHART Traffic Trend -->
-                <div class="relative h-[calc(95%-60px)]">
+                <div class="h-64 w-full">
                     <canvas id="lineEnroute2" 
                             data-labels="{{ json_encode($chartLabels) }}"
                             data-arrival="{{ json_encode($arrivalTrend) }}"
@@ -257,7 +257,7 @@
             <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                        Enroute - Total of Revenue
+                        Estimate Enroute - Total of Revenue
                     </p>
                     <p class="text-3xl font-black text-slate-800 leading-none">
                         Rp {{ number_format($totalRevenueIdr, 0, ',', '.') }}
@@ -276,7 +276,7 @@
             <div class="bg-white rounded-[1rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 relative overflow-hidden">
                 {{-- Header --}}
                 <div class="text-center relative z-10 mb-0"> {{-- Margin bottom dicabut --}}
-                    <h3 class="text-m font-black text-slate-800 tracking-tight uppercase">Revenue Enroute Composition</h3>
+                    <h3 class="text-m font-black text-slate-800 tracking-tight uppercase">Estimate Revenue Enroute Composition</h3>
                     <div class="h-0.5 w-12 bg-blue-600 mx-auto mt-2 rounded-full"></div>
                 </div>
 
@@ -332,7 +332,7 @@
                         <div class="flex items-center gap-2">
                             <div class="w-2 h-2 rounded-full bg-slate-300 animate-pulse"></div>
                             <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter italic">
-                                Rate: 1 USD = Rp {{ number_format($kurs ?? 16000, 0, ',', '.') }}
+                                Rate: 1 USD = sesuai tanggal Dof
                             </span>
                         </div>
                         <div class="flex items-center gap-1.5 opacity-60">
@@ -469,7 +469,7 @@
 
             <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Terminal - Total Revenue</p>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Estimate Terminal - Total Revenue</p>
                     <p class="text-3xl font-black text-slate-800 leading-none">Rp {{ number_format($terminalRevenueIdr, 0, ',', '.') }}</p>
                 </div>
                 <div class="h-11 w-11 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
@@ -482,7 +482,7 @@
             <div class="bg-white rounded-[1rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 relative overflow-hidden">
                 {{-- Header --}}
                 <div class="text-center relative z-10 mb-0"> {{-- Margin bottom dicabut --}}
-                    <h3 class="text-m font-black text-slate-800 tracking-tight uppercase">Revenue Terminal Composition</h3>
+                    <h3 class="text-m font-black text-slate-800 tracking-tight uppercase">Estimate Revenue Terminal Composition</h3>
                     <div class="h-0.5 w-12 bg-emerald-600 mx-auto mt-2 rounded-full"></div>
                 </div>
 
@@ -511,7 +511,7 @@
                             </div>
                         </div>
                         {{-- Tambahan Persentase agar lebih informatif --}}
-                        <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase">{{ $domPercentage ?? 0 }}%</span>
+                        <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase">{{ $terminalDomPercentage ?? 0 }}%</span>
                     </div>
 
                     {{-- Row 2: USD (International) --}}
@@ -536,7 +536,7 @@
                         <div class="flex items-center gap-2">
                             <div class="w-2 h-2 rounded-full bg-slate-300 animate-pulse"></div>
                             <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter italic">
-                                Rate: 1 USD = Rp {{ number_format($kurs ?? 16000, 0, ',', '.') }}
+                                Rate: 1 USD = Sesuai tanggal dof
                             </span>
                         </div>
                         <div class="flex items-center gap-1.5 opacity-60">
@@ -791,7 +791,7 @@ if (lineEnroute) {
     });
 }
 
-// ==================== LINE TERMINAL (PER HARI) ====================
+// // ==================== LINE TERMINAL (PER HARI) ====================
 const lineTerminal = document.getElementById('lineTerminal');
 if (lineTerminal) {
     const labels = JSON.parse(lineTerminal.dataset.labels || '[]');

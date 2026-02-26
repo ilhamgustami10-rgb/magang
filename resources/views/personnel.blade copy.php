@@ -3,7 +3,7 @@
     <section class="space-y-5">
         <div class="flex items-center gap-3 flex-wrap">
             <p class="text-slate-500 text-sm">
-                Human Resources Overview
+                Traffic Movement, Enroute & Terminal Overview
             </p>
 
             <span class="hidden sm:block w-px h-4 bg-slate-300"></span>
@@ -19,193 +19,24 @@
         </div>
         <div class="mb-4">
             <h2 class="text-2xl font-semibold text-slate-800">
-                Executive Summary
+                Flight Traffic Overview
             </h2>
             <div class="mt-2 h-1 w-16 bg-gradient-to-r from-orange-600 to-yellow-00 rounded-full"></div>
         </div>
 
         <!-- KPI + DONUT -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="relative overflow-hidden bg-slate-30/30 rounded-[1rem] border border-slate-200 p-8 lg:col-span-2 shadow-2xl shadow-slate-200/50">
-                <div class="absolute -top-24 -right-24 w-96 h-96 bg-blue-100/50 rounded-full blur-3xl"></div>
-                <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-100/50 rounded-full blur-3xl"></div>
-                
-                <div class="relative grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    
-                    <div class="lg:col-span-5">
-                        <div class="group relative h-full p-10 rounded-[3rem] bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-950 text-white shadow-2xl shadow-blue-900/20 overflow-hidden">
-                            <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20 blur-2xl"></div>
-                            
-                            <div class="relative z-10 flex flex-col h-full justify-between">
-                                <div>
-                                    <div class="inline-flex items-center gap-2 py-1.5 px-4 rounded-full bg-yellow-400/20 border border-yellow-400/30 text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
-                                        <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span> Main Branch
-                                    </div>
-                                    <h4 class="text-4xl font-black mb-1 tracking-tight">Surabaya</h4>
-                                    <p class="text-blue-200/70 text-sm font-bold tracking-widest uppercase mb-8">Pusat Pembina Jawa Timur</p>
-                                </div>
-
-                                <div class="space-y-8">
-                                    <div class="flex items-center gap-4">
-                                        <span class="text-7xl font-black tracking-tighter text-white">285</span>
-                                        <div class="h-12 w-[2px] bg-blue-400/30"></div>
-                                        <span class="text-blue-200 text-xs font-bold uppercase tracking-[0.2em] leading-tight">Staff <br>Member</span>
-                                    </div>
-                                    
-                                    <div class="p-6 rounded-[2rem] bg-white/5 backdrop-blur-xl border border-white/10 flex items-center gap-5">
-                                        <div class="h-14 w-14 rounded-2xl bg-gradient-to-tr from-yellow-400 to-orange-500 flex items-center justify-center font-black text-xl text-indigo-900 shadow-lg shadow-orange-500/20">SP</div>
-                                        <div>
-                                            <p class="text-[10px] font-bold text-yellow-400 uppercase tracking-widest">Branch Manager</p>
-                                            <p class="text-xl font-extrabold text-white">Siti Pertiwi</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
-                        <div class="space-y-4">
-                            <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] pl-2 flex items-center gap-3">
-                                <span class="w-2 h-2 rounded-full bg-blue-600"></span> Cabang Pembantu
-                            </h5>
-                            <div class="space-y-3">
-                                <div class="p-5 rounded-[2.2rem] bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 hover:border-blue-200 transition-all flex items-center justify-between group">
-                                    <div class="flex items-center gap-4">
-                                        <div class="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-inner italic font-black">S</div>
-                                        <span class="text-sm font-black text-slate-800">Sumenep</span>
-                                    </div>
-                                    <span class="text-sm font-black text-blue-600 bg-blue-50 py-1 px-3 rounded-full italic">45</span>
-                                </div>
-                                <div class="p-5 rounded-[2.2rem] bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 hover:border-blue-200 transition-all flex items-center justify-between group">
-                                    <div class="flex items-center gap-4">
-                                        <div class="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-inner italic font-black">B</div>
-                                        <span class="text-sm font-black text-slate-800">Banyuwangi</span>
-                                    </div>
-                                    <span class="text-sm font-black text-blue-600 bg-blue-50 py-1 px-3 rounded-full italic">38</span>
-                                </div>
-                                <div class="p-5 rounded-[2.2rem] bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 hover:border-blue-200 transition-all flex items-center justify-between group">
-                                    <div class="flex items-center gap-4">
-                                        <div class="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-inner italic font-black">M</div>
-                                        <span class="text-sm font-black text-slate-800">Malang</span>
-                                    </div>
-                                    <span class="text-sm font-black text-blue-600 bg-blue-50 py-1 px-3 rounded-full italic">62</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="space-y-4">
-                            <h5 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] pl-2 flex items-center gap-3">
-                                <span class="w-2 h-2 rounded-full bg-indigo-600"></span> Unit Kerja
-                            </h5>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="p-4 rounded-2xl bg-white border border-slate-100 hover:border-indigo-200 transition-all shadow-sm">
-                                    <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Unit</p>
-                                    <p class="text-sm font-bold text-slate-800">Kediri</p>
-                                    <p class="text-[10px] font-black text-indigo-600 mt-2">12 Staff</p>
-                                </div>
-                                <div class="p-4 rounded-2xl bg-white border border-slate-100 hover:border-indigo-200 transition-all shadow-sm">
-                                    <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Unit</p>
-                                    <p class="text-sm font-bold text-slate-800">Bawean</p>
-                                    <p class="text-[10px] font-black text-indigo-600 mt-2">8 Staff</p>
-                                </div>
-                                <div class="p-4 rounded-2xl bg-white border border-slate-100 hover:border-indigo-200 transition-all shadow-sm">
-                                    <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Unit</p>
-                                    <p class="text-sm font-bold text-slate-800">Jember</p>
-                                    <p class="text-[10px] font-black text-indigo-600 mt-2">15 Staff</p>
-                                </div>
-                                <div class="p-4 rounded-2xl bg-white border border-slate-100 hover:border-indigo-200 transition-all shadow-sm relative overflow-hidden">
-                                    <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Unit</p>
-                                    <p class="text-sm font-bold text-slate-800">Blora</p>
-                                    <p class="text-[10px] font-black text-indigo-600 mt-2">10 Staff</p>
-                                </div>
-                            </div>
-                
-                        </div>
-                    </div>
-
+            <div class="bg-white rounded-2xl shadow p-6 lg:col-span-2">
+                <h3 class="font-semibold mb-4 text-slate-800">Monthly Traffic Movement Trend</h3>
+                <div class="h-64">
+                    <canvas id="lineEnroute2"></canvas>
                 </div>
             </div> 
 
             <div class="bg-white rounded-2xl shadow p-6 flex flex-col">
-                <h3 class="font-bold mb-8 text-center text-slate-800 text-xl tracking-tight">Fungsi Jabatan Composition</h3>
+                <h3 class="font-semibold mb-4 text-center text-slate-800">Traffic Movement Composition</h3>
                 <div class="relative h-64 w-full"> 
-                    <div class="space-y-5">
-        <div class="group flex items-center">
-            <div class="w-40 text-sm font-semibold text-slate-600 pr-4 text-right leading-tight">
-                Managerial
-            </div>
-            <div class="flex-1 bg-slate-50 rounded-full h-8 overflow-hidden">
-                <div class="bg-rose-600 h-full flex items-center justify-end pr-4 text-white text-xs font-bold transition-all duration-500 group-hover:bg-rose-500" style="width: 12%">
-                    12%
-                </div>
-            </div>
-        </div>
-
-        <div class="group flex items-center">
-            <div class="w-40 text-sm font-semibold text-slate-600 pr-4 text-right leading-tight">
-                Supervisor ATC
-            </div>
-            <div class="flex-1 bg-slate-50 rounded-full h-8 overflow-hidden">
-                <div class="bg-rose-600 h-full flex items-center justify-end pr-4 text-white text-xs font-bold transition-all duration-500 group-hover:bg-rose-500" style="width: 18%">
-                    18%
-                </div>
-            </div>
-        </div>
-
-        <div class="group flex items-center">
-            <div class="w-40 text-sm font-semibold text-slate-600 pr-4 text-right leading-tight">
-                ATC (Pelaksana)
-            </div>
-            <div class="flex-1 bg-slate-50 rounded-full h-8 overflow-hidden">
-                <div class="bg-rose-700 h-full flex items-center justify-end pr-4 text-white text-xs font-bold transition-all duration-500 group-hover:bg-rose-600" style="width: 35%">
-                    35%
-                </div>
-            </div>
-        </div>
-
-        <div class="group flex items-center">
-            <div class="w-40 text-sm font-semibold text-slate-600 pr-4 text-right leading-tight">
-                Supervisor Support
-            </div>
-            <div class="flex-1 bg-slate-50 rounded-full h-8 overflow-hidden">
-                <div class="bg-rose-800 h-full flex items-center justify-end pr-4 text-white text-xs font-bold transition-all duration-500 group-hover:bg-rose-700" style="width: 15%">
-                    15%
-                </div>
-            </div>
-        </div>
-
-        <div class="group flex items-center">
-            <div class="w-40 text-sm font-semibold text-slate-600 pr-4 text-right leading-tight">
-                Support (Pelaksana)
-            </div>
-            <div class="flex-1 bg-slate-50 rounded-full h-8 overflow-hidden">
-                <div class="bg-rose-900 h-full flex items-center justify-end pr-4 text-white text-xs font-bold transition-all duration-500 group-hover:bg-rose-800" style="width: 25%">
-                    25%
-                </div>
-            </div>
-        </div>
-
-        <div class="group flex items-center">
-            <div class="w-40 text-sm font-semibold text-slate-600 pr-4 text-right leading-tight">
-                Staff
-            </div>
-            <div class="flex-1 bg-slate-50 rounded-full h-8 overflow-hidden">
-                <div class="bg-slate-800 h-full flex items-center justify-end pr-4 text-white text-xs font-bold transition-all duration-500 group-hover:bg-slate-700" style="width: 40%">
-                    40%
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="mt-8 pt-4 border-t border-slate-100 flex justify-between text-[10px] text-slate-400 uppercase tracking-widest">
-        <span>0%</span>
-        <span>25%</span>
-        <span>50%</span>
-        <span>75%</span>
-        <span>100%</span>
-    </div>
+                    <canvas id="donutTraffic"></canvas>
                 </div>
             </div>
 
