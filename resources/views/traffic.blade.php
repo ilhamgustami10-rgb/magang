@@ -34,13 +34,13 @@
                     </div>
                 </div>
                 <!-- LINE CHART Traffic Trend -->
-                <div class="h-64 w-full">
-    <canvas id="lineEnroute2" 
-            data-labels="{{ json_encode($chartLabels) }}"
-            data-arrival="{{ json_encode($arrivalTrend) }}"
-            data-departure="{{ json_encode($departureTrend) }}">
-    </canvas>
-</div>
+                <div class="relative h-[calc(80%)]">
+                    <canvas id="lineEnroute2" 
+                            data-labels="{{ json_encode($chartLabels) }}"
+                            data-arrival="{{ json_encode($arrivalTrend) }}"
+                            data-departure="{{ json_encode($departureTrend) }}">
+                    </canvas>
+                </div>
             </div>
 
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col items-center max-w-m">
