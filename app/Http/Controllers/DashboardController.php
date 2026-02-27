@@ -472,6 +472,9 @@ class DashboardController extends Controller
                 ];
             });
 
+        // Period Terminal
+        $latestDatetraffic = TrafficData::max('tanggal');
+        $periodtraffic = $latestDatetraffic ? Carbon::parse($latestDatetraffic)->format('d M Y') : 'Aug 2026';
         // ============================================
         // PASS KE VIEW
         // ============================================
@@ -533,7 +536,8 @@ class DashboardController extends Controller
             'trafficPeakHeights',
             'trafficPeakStart',
             'trafficPeakEnd',
-            'trafficHourlyTraffic'
+            'trafficHourlyTraffic',
+            'periodtraffic'
         ));
     }
     

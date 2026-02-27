@@ -75,37 +75,27 @@ class extends Component {
     $value = trim($value);
     \Log::info("parseDate - raw value: " . $value);
     
-    // Format Y-m-d (2026-01-31) - PALING UMUM
+    // Ambil hanya tanggal jika ada waktu (2026-01-01 00:00:00)
+    if (strpos($value, ' ') !== false) {
+        $value = explode(' ', $value)[0];
+        \Log::info("parseDate - after space trim: " . $value);
+    }
+    
+    // Format Y-m-d (2026-01-31)
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
         \Log::info("parseDate: Y-m-d format detected");
         return $value;
     }
     
-    // Format Y-m-d H:i:s (2026-01-31 00:00:00)
-    if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value)) {
-        $datePart = explode(' ', $value)[0];
-        \Log::info("parseDate: datetime format detected, date part: " . $datePart);
-        return $datePart;
-    }
-    
-    // Excel serial date (numeric)
-    if (is_numeric($value)) {
-        try {
-            $date = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
-            $result = $date->format('Y-m-d');
-            \Log::info("parseDate: Excel serial date converted to: " . $result);
-            return $result;
-        } catch (\Exception $e) {
-            \Log::warning("parseDate: Excel conversion failed: " . $e->getMessage());
-            return null;
-        }
-    }
-    
-    // Format dd/mm/yyyy (31/01/2026)
+    // Format m/d/yyyy atau mm/dd/yyyy (US format)
     if (preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $value)) {
         $parts = explode('/', $value);
-        $result = $parts[2] . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[0], 2, '0', STR_PAD_LEFT);
-        \Log::info("parseDate: dd/mm/yyyy converted to: " . $result);
+        // parts[0] = bulan, parts[1] = tanggal, parts[2] = tahun
+        $bulan = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
+        $hari = str_pad($parts[1], 2, '0', STR_PAD_LEFT);
+        $tahun = $parts[2];
+        $result = $tahun . '-' . $bulan . '-' . $hari;
+        \Log::info("parseDate: m/d/yyyy converted to: " . $result);
         return $result;
     }
     

@@ -6,9 +6,18 @@
                 Traffic Movement, Enroute & Terminal Overview
             </p>
         </div>
-        <div class="mb-4">  
-            <h2 class="text-2xl font-semibold text-slate-800">
-                Flight Traffic Overview
+        <div class="mb-4">
+            <h2 class="flex items-center gap-3 text-2xl font-semibold text-slate-800">
+                <span>Flight Traffic Overview</span>
+                <span class="hidden sm:block w-px h-5 bg-slate-300"></span>
+               <div class="inline-flex items-center gap-1">
+                    <span class="inline-flex items-center bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
+                        Updated
+                    </span>
+                    <span class="inline-flex items-center bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
+                        {{ $periodtraffic }}
+                    </span>
+                </div>
             </h2>
             <div class="mt-2 h-1 w-16 bg-gradient-to-r from-orange-600 to-yellow-00 rounded-full"></div>
         </div>
