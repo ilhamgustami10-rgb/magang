@@ -146,6 +146,7 @@ class extends Component {
 }; ?>
 
 <div class="space-y-6">
+    @include('admin.traffic-tabs')
     <header class="flex justify-between items-center">
         <h1 class="text-3xl font-black text-slate-800 tracking-tight">Master Data Airline</h1>
     </header>

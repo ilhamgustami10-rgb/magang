@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FinanceController;
 use Livewire\Volt\Volt; 
 
 /*
@@ -17,15 +18,13 @@ use Livewire\Volt\Volt;
 
 Route::get('/', [DashboardController::class, 'index'])->name('traffic'); 
 
-Route::get('/finance', function () {
-    return view('finance');
-})->name('finance');
+Route::get('/finance', [FinanceController::class, 'index'])->name('finance');
 
 Route::get('/personnel', function () {
     return view('personnel');
 })->name('personnel');
 
-
+Route::get('/dashboard/finance', [FinanceController::class, 'index'])->name('dashboard.finance');
 /*
 |--------------------------------------------------------------------------
 | HALAMAN ADMIN (Harus Login)
@@ -35,9 +34,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // 1. Dashboard Overview
     // Menggunakan rute tunggal agar sinkron dengan sidebar request()->routeIs('dashboard')
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'adminOverview'])->name('dashboard');
 
     // 2. Master Data Group
     Route::prefix('admin')->name('admin.')->group(function () {
@@ -53,6 +50,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Volt::route('terminals', 'admin.terminals.index')->name('terminals.index');
         Volt::route('/', 'admin.index')->name('index');
+
+        Volt::route('finances', 'admin.finances.index')->name('finances.index');
 
     });
 

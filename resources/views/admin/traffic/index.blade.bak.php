@@ -66,215 +66,163 @@ class extends Component {
     }
 
     private function parseDate($value)
-    {
-        if ($value === null || $value === '') return null;
-
-        // Excel serial number (mis. 46023)
-        if (is_numeric($value)) {
-            try {
-                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$value)->format('Y-m-d');
-            } catch (\Exception $e) {
-                return null;
-            }
-        }
-
-        $value = trim((string)$value);
-
-        // Buang jam jika ada (2026-01-01 00:00:00)
-        if (strpos($value, ' ') !== false) {
-            $value = explode(' ', $value)[0];
-        }
-
-        // Format Y-m-d (2026-01-31)
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-            return $value;
-        }
-
-        // Format m/d/Y atau d/m/Y
-        if (preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $value)) {
-            $parts = explode('/', $value);
-            $bulan = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
-            $hari  = str_pad($parts[1], 2, '0', STR_PAD_LEFT);
-            return $parts[2] . '-' . $bulan . '-' . $hari;
-        }
-
-        $ts = strtotime($value);
-        return $ts ? date('Y-m-d', $ts) : null;
-    }
-
-    private function parseTime($value)
-    {
-        if ($value === null || $value === '') return null;
-
-        // Excel time serial (pecahan dari 1 hari)
-        if (is_numeric($value)) {
-            $frac = (float)$value - floor((float)$value);
-            return gmdate('H:i:s', (int) round($frac * 86400));
-        }
-
-        $value = trim((string)$value);
-        if (preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $value)) {
-            return strlen($value) === 5 ? $value . ':00' : $value;
-        }
+{
+    if (empty($value)) {
+        \Log::info("parseDate: empty value");
         return null;
     }
-
-    /**
-     * Cari index kolom berdasarkan nama header (case-insensitive).
-     */
-    private function findCol(array $map, array $candidates)
-    {
-        foreach ($candidates as $c) {
-            $c = strtolower(trim($c));
-            if (array_key_exists($c, $map)) return $map[$c];
-        }
-        return null;
+    
+    $value = trim($value);
+    \Log::info("parseDate - raw value: " . $value);
+    
+    // Ambil hanya tanggal jika ada waktu (2026-01-01 00:00:00)
+    if (strpos($value, ' ') !== false) {
+        $value = explode(' ', $value)[0];
+        \Log::info("parseDate - after space trim: " . $value);
     }
-
+    
+    // Format Y-m-d (2026-01-31)
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        \Log::info("parseDate: Y-m-d format detected");
+        return $value;
+    }
+    
+    // Format m/d/yyyy atau mm/dd/yyyy (US format)
+    if (preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $value)) {
+        $parts = explode('/', $value);
+        // parts[0] = bulan, parts[1] = tanggal, parts[2] = tahun
+        $bulan = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
+        $hari = str_pad($parts[1], 2, '0', STR_PAD_LEFT);
+        $tahun = $parts[2];
+        $result = $tahun . '-' . $bulan . '-' . $hari;
+        \Log::info("parseDate: m/d/yyyy converted to: " . $result);
+        return $result;
+    }
+    
+    \Log::warning("parseDate: UNRECOGNIZED FORMAT - " . $value);
+    return null;
+}
+    
     public function prosesImport()
     {
         try {
             $this->validate([
-                'fileImport' => 'required|file|max:20480'
+                'fileImport' => 'required|file|max:20480'  // ← 20MB
             ]);
-
-            $extension = strtolower($this->fileImport->getClientOriginalExtension());
-            if (!in_array($extension, ['xlsx', 'xls', 'csv'])) {
-                session()->flash('error', 'File harus berformat: xlsx, xls, csv');
+            
+            $extension = $this->fileImport->getClientOriginalExtension();
+            $allowed = ['xlsx', 'xls', 'csv'];
+            
+            if (!in_array(strtolower($extension), $allowed)) {
+                session()->flash('error', 'File harus berformat: ' . implode(', ', $allowed));
                 return;
             }
-
+            
             $path = $this->fileImport->getRealPath();
             $spreadsheet = IOFactory::load($path);
             $rows = $spreadsheet->getActiveSheet()->toArray();
-
-            // === Deteksi baris header secara dinamis ===
-            // (file punya beberapa baris metadata sebelum header asli)
-            $headerIndex = null;
-            foreach ($rows as $i => $row) {
-                $lower = array_map(fn($c) => strtolower(trim((string)$c)), $row);
-                if (in_array('dof', $lower) || in_array('aircraft id', $lower) || in_array('acid', $lower)) {
-                    $headerIndex = $i;
-                    break;
-                }
+            
+            // Buang baris header (asumsi baris pertama adalah header kolom)
+            $headers = array_shift($rows);
+            
+            // Filter data bersih
+            $dataBersih = [];
+            foreach ($rows as $row) {
+                if (empty(array_filter($row))) continue;
+                $dataBersih[] = $row;
             }
-            if ($headerIndex === null) {
-                session()->flash('error', 'Tidak menemukan baris header (kolom DOF / Aircraft ID). Periksa format file Excel.');
-                return;
-            }
-
-            // Peta nama kolom -> index
-            $map = [];
-            foreach ($rows[$headerIndex] as $idx => $name) {
-                $key = strtolower(trim((string)$name));
-                if ($key !== '') $map[$key] = $idx;
-            }
-
-            $iDof     = $this->findCol($map, ['dof', 'tanggal', 'date', 'flight date']);
-            $iAcid    = $this->findCol($map, ['aircraft id', 'acid', 'aircraft_id']);
-            $iAdep    = $this->findCol($map, ['adep']);
-            $iAdes    = $this->findCol($map, ['ades']);
-            $iReg     = $this->findCol($map, ['registrasi', 'reg', 'a-reg']);
-            $iType    = $this->findCol($map, ['type', 'tipe', 'a-type']);
-            $iTimeIn  = $this->findCol($map, ['time in']);
-            $iTimeOut = $this->findCol($map, ['time out']);
-
-            $dataRows = array_slice($rows, $headerIndex + 1);
-
+            
+            $totalData = count($dataBersih);
+            
             DB::beginTransaction();
-
+            
+            // Simpan ke traffic_upload
             $upload = TrafficUpload::create([
-                'file_name'   => $this->fileImport->getClientOriginalName(),
+                'file_name' => $this->fileImport->getClientOriginalName(),
                 'uploaded_by' => auth()->user()->name ?? 'System',
-                'status'      => 'processed',
-                'total_rows'  => 0
+                'status' => 'processed',
+                'total_rows' => $totalData
             ]);
-
-            $successCount  = 0;
+            
+            $successCount = 0;
             $tanggalValues = [];
-            $homeBase      = 'WARR'; // Kantor Cabang WARR (Juanda, Surabaya)
-
-            foreach ($dataRows as $row) {
-                if (empty(array_filter($row, fn($v) => $v !== null && $v !== ''))) continue;
-
-                $tanggal = $this->parseDate($iDof !== null ? ($row[$iDof] ?? null) : null);
-                if (!$tanggal) continue;
-
-                $aircraftId = $iAcid !== null ? trim((string)($row[$iAcid] ?? '')) : '';
-                if ($aircraftId === '') continue;
-
-                $adep = $iAdep !== null ? trim((string)($row[$iAdep] ?? '')) : null;
-                $ades = $iAdes !== null ? trim((string)($row[$iAdes] ?? '')) : null;
-
-                // Turunkan arrival/departure relatif ke home base (WARR)
-                $depArr = null;
-                if ($ades && strtoupper($ades) === $homeBase) {
-                    $depArr = 'A';
-                } elseif ($adep && strtoupper($adep) === $homeBase) {
-                    $depArr = 'D';
+            
+            foreach ($dataBersih as $row) {
+                
+                // Mapping sesuai struktur Excel yang BENAR
+                $tanggal = $this->parseDate($row[1] ?? null);      // Index 1 = Tanggal
+                if (!$tanggal) {
+                    \Log::warning("Skipping row - invalid date");
+                    continue;
                 }
-
+                $tanggalValues[] = $tanggal;
+                
+                $aircraftId = $row[2] ?? null;                     // Index 2 = ACID
+                if (empty($aircraftId)) {
+                    \Log::warning("Skipping row - empty aircraft ID");
+                    continue;
+                }
+                
                 $airline3Code = substr($aircraftId, 0, 3);
                 $airline = Airline::where('airline3_code', $airline3Code)->first();
-
-                $tanggalValues[] = $tanggal;
-
+                
+                // Simpan data
                 TrafficData::create([
                     'id_traffic_upload' => $upload->id_traffic_upload,
-                    'tanggal'       => $tanggal,
-                    'aircraft_id'   => $aircraftId,
+                    'tanggal' => $tanggal,
+                    'aircraft_id' => $aircraftId,
                     'airline3_code' => $airline3Code,
-                    'id_airline'    => $airline->id ?? null,
-                    'registrasi'    => $iReg !== null ? ($row[$iReg] ?? null) : null,
-                    'type'          => $iType !== null ? ($row[$iType] ?? null) : null,
-                    'adep'          => $adep,
-                    'ades'          => $ades,
-                    'eobt'          => null,
-                    'pushback'      => null,
-                    'taxi'          => null,
-                    'dep_arr_lcl'   => $depArr,
-                    'atd'           => $iTimeIn !== null ? $this->parseTime($row[$iTimeIn] ?? null) : null,
-                    'eta'           => null,
-                    'ata'           => $iTimeOut !== null ? $this->parseTime($row[$iTimeOut] ?? null) : null,
-                    'ruid_dep'      => null,
-                    'rui_arr'       => null,
-                    'parking_dep'   => null,
-                    'parking_arr'   => null,
-                    'pob'           => null,
-                    'remark'        => null,
-                    'status_flight' => 'REGULER',
+                    'id_airline' => $airline->id ?? null,
+                    'registrasi' => $row[3] ?? null,
+                    'type' => $row[4] ?? null,
+                    'adep' => $row[5] ?? null,
+                    'ades' => $row[6] ?? null,
+                    'eobt' => $row[7] ?? null,
+                    'pushback' => $row[8] ?? null,
+                    'taxi' => $row[9] ?? null,           // ← Ganti taxi_dep_arr dengan taxi
+                    'dep_arr_lcl' => $row[10] ?? null,   // ← Kolom baru untuk TAXI DEP/ARCL?
+                    'atd' => $row[11] ?? null,
+                    'eta' => $row[12] ?? null,
+                    'ata' => $row[13] ?? null,
+                    'ruid_dep' => $row[14] ?? null,
+                    'rui_arr' => $row[15] ?? null,
+                    'parking_dep' => $row[16] ?? null,
+                    'parking_arr' => $row[17] ?? null,
+                    'pob' => $row[18] ?? null,
+                    'remark' => $row[19] ?? null,
+                    'status_flight' => $row[20] ?? null,
                 ]);
-
+                
                 $successCount++;
             }
-
+            
+            // Update range tanggal
             if (!empty($tanggalValues)) {
                 $upload->update([
-                    'tanggal_awal'  => min($tanggalValues),
+                    'tanggal_awal' => min($tanggalValues),
                     'tanggal_akhir' => max($tanggalValues),
-                    'total_rows'    => $successCount
+                    'total_rows' => $successCount
                 ]);
-            } else {
-                $upload->update(['total_rows' => $successCount]);
             }
-
+            
             DB::commit();
-
-            session()->flash('message',
-                "\u{2705} DATA TRAFFIC BERHASIL DISIMPAN!<br>" .
+            
+            session()->flash('message', 
+                "✅ DATA TRAFFIC BERHASIL DISIMPAN!<br>" .
                 "ID Upload: " . $upload->id_traffic_upload . "<br>" .
                 "File: " . $upload->file_name . "<br>" .
                 "Total data: " . $successCount . " baris<br>" .
                 "Range Tanggal: " . ($upload->tanggal_awal ?? '-') . " s/d " . ($upload->tanggal_akhir ?? '-')
             );
-
+            
             $this->reset('fileImport');
             $this->dispatch('$refresh');
-
+            
         } catch (\Exception $e) {
             DB::rollBack();
             session()->flash('error', 'Error: ' . $e->getMessage() . ' - Line: ' . $e->getLine());
             \Log::error('Import traffic error: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
         }
     }
 
@@ -330,7 +278,6 @@ class extends Component {
 ?>
 
 <div class="space-y-6">
-    @include('admin.traffic-tabs')
     <header class="flex justify-between items-center">
         <h1 class="text-3xl font-black text-slate-800 tracking-tight">
             @if($showDetail)

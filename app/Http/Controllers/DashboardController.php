@@ -10,11 +10,32 @@ use App\Models\EnrouteData;
 use App\Models\TerminalUpload;
 use App\Models\TerminalData;
 use App\Models\Airline;
+use App\Models\FinanceData;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    public function adminOverview()
+    {
+        $sources = [
+            ['label' => 'Master Airline', 'records' => Airline::count(), 'uploads' => null, 'route' => 'admin.airlines.index'],
+            ['label' => 'Traffic Movement', 'records' => TrafficData::count(), 'uploads' => TrafficUpload::count(), 'route' => 'admin.traffic.index'],
+            ['label' => 'Enroute', 'records' => EnrouteData::count(), 'uploads' => EnrouteUpload::count(), 'route' => 'admin.enroutes.index'],
+            ['label' => 'Terminal', 'records' => TerminalData::count(), 'uploads' => TerminalUpload::count(), 'route' => 'admin.terminals.index'],
+            ['label' => 'Finance', 'records' => FinanceData::count(), 'uploads' => null, 'route' => 'admin.finances.index'],
+        ];
+
+        return view('admin.dashboard', [
+            'sources' => $sources,
+            'totalRecords' => collect($sources)->sum('records'),
+            'lastInputAt' => collect([
+                TrafficData::max('updated_at'), EnrouteData::max('updated_at'),
+                TerminalData::max('updated_at'), FinanceData::max('updated_at'), Airline::max('updated_at'),
+            ])->filter()->max(),
+        ]);
+    }
+
     public function index()
     {
         // ============================================
