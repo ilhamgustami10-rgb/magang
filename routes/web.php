@@ -19,6 +19,7 @@ use Livewire\Volt\Volt;
 Route::get('/', [DashboardController::class, 'index'])->name('traffic'); 
 
 Route::get('/finance', [FinanceController::class, 'index'])->name('finance');
+Route::post('/finance/import', [FinanceController::class, 'import'])->name('finance.import');
 
 Route::get('/personnel', function () {
     return view('personnel');

@@ -1,38 +1,7 @@
 <x-app-layout>
 @php
-$dummyFinanceData = [
-    'AirNav Juanda (Utama)' => [
-        [ 'item' => '5102021000 H-PMLH Bang Lapangan',     'rkap' => 68834756,   'release_budget' => 230834756,  'commitment' => 75214260,  'total_consume' => 149593132,  'available_budget' => 81241624  ],
-        [ 'item' => '5102022000 H-PMLH Bang Gedung',        'rkap' => 500000000,  'release_budget' => 460000000,  'commitment' => 0,         'total_consume' => 550000,     'available_budget' => 459450000 ],
-        [ 'item' => '5102024001 H-PMLH Air-Ground',         'rkap' => 6000000000, 'release_budget' => 5380026549, 'commitment' => 209910000, 'total_consume' => 4473063938, 'available_budget' => 906962611 ],
-        [ 'item' => '5102024003 H-PMLH Navigation',         'rkap' => 80000000,   'release_budget' => 75164660,   'commitment' => 0,         'total_consume' => 0,          'available_budget' => 75164660  ],
-        [ 'item' => '5102024005 H-PMLH Surveillance',       'rkap' => 40000000,   'release_budget' => 38068396,   'commitment' => 0,         'total_consume' => 0,          'available_budget' => 38068396  ],
-        [ 'item' => '5102026000 H-PMLH Inst&Jaringan',      'rkap' => 350000000,  'release_budget' => 318681000,  'commitment' => 117694000, 'total_consume' => 120714000,  'available_budget' => 197967000 ],
-        [ 'item' => '5102028000 H-PMLH Kebersihan',         'rkap' => 457454023,  'release_budget' => 457454023,  'commitment' => 102306769, 'total_consume' => 411121073,  'available_budget' => 46332950  ],
-        [ 'item' => '5102030004 H-Beban Perlengkapan BBM',  'rkap' => 84147498,   'release_budget' => 84147498,   'commitment' => 3968000,   'total_consume' => 68899528,   'available_budget' => 15247970  ],
-        [ 'item' => '5102040002 H-Utilitas Listrik',        'rkap' => 839446689,  'release_budget' => 839446689,  'commitment' => 2053192,   'total_consume' => 544517668,  'available_budget' => 294929021 ],
-        [ 'item' => '5103030001 H-Outsourcing TK',          'rkap' => 1238801303, 'release_budget' => 1238801303, 'commitment' => 0,         'total_consume' => 843518220,  'available_budget' => 395283083 ],
-    ],
-    'Cabang Surabaya' => [
-        [ 'item' => '5102021000 H-PMLH Bang Lapangan',     'rkap' => 1200000,   'release_budget' => 1200000,   'commitment' => 300000,  'total_consume' => 600000,   'available_budget' => 600000   ],
-        [ 'item' => '5102027000 H-PMLH Alat Angkut',       'rkap' => 1386000,   'release_budget' => 1386000,   'commitment' => 346500,  'total_consume' => 693000,   'available_budget' => 693000   ],
-        [ 'item' => '5102028000 H-PMLH Kebersihan',        'rkap' => 120896,    'release_budget' => 120896,    'commitment' => 0,       'total_consume' => 75000,    'available_budget' => 45896    ],
-        [ 'item' => '5102030004 H-Beban Perlengkapan BBM', 'rkap' => 2520000,   'release_budget' => 2520000,   'commitment' => 560000,  'total_consume' => 1620000,  'available_budget' => 900000   ],
-        [ 'item' => '5102030005 H-PLKPN Kep. ATK&CU',     'rkap' => 3069559,   'release_budget' => 3069559,   'commitment' => 0,       'total_consume' => 650000,   'available_budget' => 2419559  ],
-        [ 'item' => '5102030099 H-PLKPN Kep. Lain2',      'rkap' => 2880862,   'release_budget' => 2880862,   'commitment' => 755982,  'total_consume' => 1755000,  'available_budget' => 1125862  ],
-        [ 'item' => '5102040002 H-Utilitas Listrik',       'rkap' => 103565409, 'release_budget' => 103565409, 'commitment' => 600073,  'total_consume' => 77163525, 'available_budget' => 26401884 ],
-        [ 'item' => '5102040003 H-Utilitas Kom/Telp',      'rkap' => 9995433,   'release_budget' => 9995433,   'commitment' => 210000,  'total_consume' => 7130606,  'available_budget' => 2864827  ],
-    ],
-    'Cabang Banyuwangi' => [
-        [ 'item' => '5102021000 H-PMLH Bang Lapangan',     'rkap' => 800000,    'release_budget' => 800000,    'commitment' => 100000,  'total_consume' => 450000,   'available_budget' => 350000   ],
-        [ 'item' => '5102030004 H-Beban Perlengkapan BBM', 'rkap' => 1520000,   'release_budget' => 1520000,   'commitment' => 260000,  'total_consume' => 820000,   'available_budget' => 700000   ],
-        [ 'item' => '5102040002 H-Utilitas Listrik',       'rkap' => 63565409,  'release_budget' => 63565409,  'commitment' => 200073,  'total_consume' => 41163525, 'available_budget' => 22401884 ],
-        [ 'item' => '5103030001 H-Outsourcing TK',         'rkap' => 15880130,  'release_budget' => 15880130,  'commitment' => 0,       'total_consume' => 12435182, 'available_budget' => 3444948  ],
-    ]
-];
-
-// Gunakan data contoh untuk visualisasi awal; data CSV akan menggantikannya saat tersedia.
-$financeData = !empty($financeData) ? $financeData : $dummyFinanceData;
+$financeData = $financeData ?? [];
+$firstTab = !empty($financeData) ? array_key_first($financeData) : '';
 
 if (!function_exists('fmtCard')) {
     function fmtCard($v) {
@@ -333,7 +302,7 @@ document.addEventListener('alpine:init', () => {
 {{-- ============================================================
      MAIN SECTION
      ============================================================ --}}
-<section class="space-y-5" x-data="{ activeTab: 'AirNav Juanda (Utama)' }">
+<section class="space-y-5" x-data="{ activeTab: '{{ $firstTab }}' }">
 
     {{-- HEADER --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -348,7 +317,7 @@ document.addEventListener('alpine:init', () => {
             <div class="mt-2 h-1 w-16 bg-gradient-to-r from-blue-600 to-sky-400 rounded-full"></div>
         </div>
         {{-- Branch Tabs --}}
-        <div class="flex items-center gap-1 bg-slate-100/80 p-1.5 rounded-xl border border-slate-200 overflow-x-auto fin-scroll">
+        <div class="flex items-center gap-1 bg-slate-100/80 p-1.5 rounded-xl border border-slate-200 overflow-x-auto fin-scroll flex-1 max-w-full">
             @foreach($financeData as $branchName => $__)
             <button
                 @click="activeTab='{{ $branchName }}'; setTimeout(()=>window.dispatchEvent(new Event('resize')),80);"
@@ -679,6 +648,17 @@ document.addEventListener('alpine:init', () => {
 
     </div>{{-- end branch div --}}
     @endforeach
+
+    {{-- ===== EMPTY STATE ===== --}}
+    @if(empty($financeData))
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 flex flex-col items-center justify-center text-center">
+        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+            <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-700 mb-2">Belum ada data Finance.</h3>
+        <p class="text-sm text-slate-500 mb-6">Hubungi Admin untuk mengimpor file CSV/Excel dari SAP.</p>
+    </div>
+    @endif
 
     <style>
         .fin-scroll::-webkit-scrollbar,.fin-scroll2::-webkit-scrollbar{height:4px;width:4px;}
