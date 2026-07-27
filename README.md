@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 📊 Finance Dashboard — Realisasi Anggaran AirNav Indonesia (Cabang Surabaya)
 Proyek magang (PKL) untuk membangun dashboard monitoring realisasi anggaran berbasis data laporan SAP (Budget/Fund Management) milik AirNav Indonesia Cabang Surabaya. Data mentah dari SAP diolah menjadi visualisasi interaktif agar realisasi anggaran per cabang & per Funds Center lebih mudah dipantau.
 
