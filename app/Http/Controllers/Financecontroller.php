@@ -14,47 +14,38 @@ class FinanceController extends Controller
         
         $financeData = [];
         
-        // Tab Semua
-        $allItems = [];
-        foreach ($branches as $branch) {
-            foreach ($branch->items as $item) {
-                // Group items by code for the "Semua" tab
-                $key = $item->code;
-                if (!isset($allItems[$key])) {
-                    $allItems[$key] = [
-                        'item' => $item->code . ' ' . $item->name,
-                        'rkap' => 0,
-                        'release_budget' => 0,
-                        'commitment' => 0,
-                        'total_consume' => 0,
-                        'available_budget' => 0,
-                    ];
-                }
-                $allItems[$key]['rkap'] += $item->rkap;
-                $allItems[$key]['release_budget'] += $item->release_budget;
-                $allItems[$key]['commitment'] += $item->commitment;
-                $allItems[$key]['total_consume'] += $item->total_consume;
-                $allItems[$key]['available_budget'] += $item->available_budget;
-            }
-        }
-        if (!empty($allItems)) {
-            $financeData['Semua'] = array_values($allItems);
-        }
-
         // Tab per Cabang
         foreach ($branches as $branch) {
-            $branchItems = [];
+            $branchName = $branch->name;
+            
+            $financeData[$branchName] = [
+                'rkap'       => 0,
+                'release'    => 0,
+                'commitment' => 0,
+                'consume'    => 0,
+                'available'  => 0,
+                'items'      => [],
+            ];
+            
             foreach ($branch->items as $item) {
-                $branchItems[] = [
-                    'item' => $item->code . ' ' . $item->name,
-                    'rkap' => $item->rkap,
-                    'release_budget' => $item->release_budget,
-                    'commitment' => $item->commitment,
-                    'total_consume' => $item->total_consume,
-                    'available_budget' => $item->available_budget,
+                // Tambahkan nilai item ke agregat cabang
+                $financeData[$branchName]['rkap']       += $item->rkap;
+                $financeData[$branchName]['release']    += $item->release_budget;
+                $financeData[$branchName]['commitment'] += $item->commitment;
+                $financeData[$branchName]['consume']    += $item->total_consume;
+                $financeData[$branchName]['available']  += $item->available_budget;
+
+                // Push detail item
+                $financeData[$branchName]['items'][] = [
+                    'code'       => $item->code,
+                    'name'       => $item->name,
+                    'rkap'       => (float) $item->rkap,
+                    'release'    => (float) $item->release_budget,
+                    'commitment' => (float) $item->commitment,
+                    'consume'    => (float) $item->total_consume,
+                    'available'  => (float) $item->available_budget,
                 ];
             }
-            $financeData[$branch->name] = $branchItems;
         }
 
         return view('finance', compact('financeData'));

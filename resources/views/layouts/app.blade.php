@@ -11,17 +11,17 @@
         @livewireStyles
     </head>
     <body class="bg-slate-50 font-sans antialiased text-slate-900">
-        <div class="min-h-screen">
-            <div class="max-w-[1800px] mx-auto p-6 space-y-8">
-                
+        <div class="min-h-screen w-full">
+            <!-- Navigation dengan padding -->
+            <div class="px-4 sm:px-6 lg:px-8 py-6">
                 @include('layouts.navigation')
-
-                <main>
-                    {{ $slot }}
-                    
-                    @livewireScripts
-                </main>
             </div>
+
+            <main class="w-full">
+                {{ $slot }}
+                
+                @livewireScripts
+            </main>
         </div>
     </body>
 </html>

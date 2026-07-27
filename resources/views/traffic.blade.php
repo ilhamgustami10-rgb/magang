@@ -1,50 +1,43 @@
-<x-app-layout>   
+<x-app-layout>
     <!-- ========================= Traffic Movement ========================= -->
-    <section class="space-y-5">
-        <div class="flex items-center gap-3 flex-wrap">
-            <p class="text-slate-500 text-sm">
-                Traffic Movement, Enroute & Terminal Overview
-            </p>
-        </div>
-        <div class="mb-4">
-            <h2 class="flex items-center gap-3 text-2xl font-semibold text-slate-800">
+    <section class="space-y-8 px-6 sm:px-10 lg:px-14 w-full pb-12">
+
+        <!-- Section Header -->
+        <div class="mb-2 pt-2">
+            <h2 class="flex items-center gap-4 text-[42px] font-black text-slate-800 tracking-tight">
                 <span>Flight Traffic Overview</span>
-                <span class="hidden sm:block w-px h-5 bg-slate-300"></span>
-               <div class="inline-flex items-center gap-1">
-                    <span class="inline-flex items-center bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
-                        Updated
-                    </span>
-                    <span class="inline-flex items-center bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
-                        {{ $periodtraffic }}
-                    </span>
+                <span class="hidden sm:block w-px h-7 bg-slate-300"></span>
+                <div class="inline-flex items-center gap-2">
+                    <span class="inline-flex items-center bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">Updated</span>
+                    <span class="inline-flex items-center bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">{{ $periodtraffic }}</span>
                 </div>
             </h2>
-            <div class="mt-2 h-1 w-16 bg-gradient-to-r from-orange-600 to-yellow-00 rounded-full"></div>
+            <div class="mt-3 h-1.5 w-20 bg-gradient-to-r from-orange-500 to-yellow-300 rounded-full"></div>
         </div>
 
-        <!-- KPI + DONUT -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="bg-white rounded-[1.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 lg:col-span-2 relative overflow-hidden">
-                <div class="flex justify-between items-start mb-6">
+        <!-- KPI + DONUT Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Monthly Traffic Trend Chart -->
+            <div class="bg-white rounded-[1.75rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-10 lg:col-span-2 relative overflow-hidden">
+                <div class="flex justify-between items-start mb-8">
                     <div>
-                        <h3 class="text-lg font-black text-slate-800 tracking-tight uppercase">Monthly Traffic Trend</h3>
-                        <div class="h-0.5 w-10 bg-amber-500 mt-2 rounded-full"></div>
+                        <h3 class="text-2xl font-black text-slate-800 tracking-tight uppercase">Monthly Traffic Trend</h3>
+                        <div class="h-1 w-14 bg-amber-500 mt-3 rounded-full"></div>
                     </div>
-                    {{-- Custom Legend --}}
-                    <div class="flex gap-4">
+                    <div class="flex gap-6">
                         <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-[#ebac25]"></div>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase">Arrival</span>
+                            <div class="w-4 h-4 rounded-full bg-[#ebac25]"></div>
+                            <span class="text-sm font-bold text-slate-500 uppercase tracking-wide">Arrival</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-[#f97316]"></div>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase">Departure</span>
+                            <div class="w-4 h-4 rounded-full bg-[#f97316]"></div>
+                            <span class="text-sm font-bold text-slate-500 uppercase tracking-wide">Departure</span>
                         </div>
                     </div>
                 </div>
-                <!-- LINE CHART Traffic Trend -->
-                <div class="h-64 w-full">
-                    <canvas id="lineEnroute2" 
+                <!-- LINE CHART Traffic Trend — taller for HD -->
+                <div class="h-96 w-full">
+                    <canvas id="lineEnroute2"
                             data-labels="{{ json_encode($chartLabels) }}"
                             data-arrival="{{ json_encode($arrivalTrend) }}"
                             data-departure="{{ json_encode($departureTrend) }}">
@@ -52,119 +45,110 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col items-center max-w-m">
-                <h3 class="font-bold mb-4 text-slate-800 text-lg">Traffic Movement Composition</h3>
-                
-                <div class="relative h-64 w-full mb-6">
-                    <canvas id="donutTraffic" 
-                            data-international="{{ $internationalPct }}" 
+            <!-- Donut + Total -->
+            <div class="bg-white rounded-[1.75rem] shadow-xl border border-slate-100 p-8 flex flex-col items-center">
+                <h3 class="font-black mb-5 text-slate-800 text-xl uppercase tracking-tight">Traffic Composition</h3>
+                <div class="relative h-72 w-full mb-6">
+                    <canvas id="donutTraffic"
+                            data-international="{{ $internationalPct }}"
                             data-domestic="{{ $domesticPct }}">
                     </canvas>
                 </div>
-
-                <div class="w-full bg-orange-100 rounded-xl p-4 flex flex-col items-center">
-                    <span class="text-slate-800 text-xs uppercase tracking-widest font-semibold mb-1">Total Traffic</span>
-                    <div class="h-0.5 w-20 bg-orange-600 mx-auto mb-2 rounded-full"></div>
-                    <div class="flex items-baseline gap-2">
-                        <span class="text-3xl font-extrabold text-slate-900 leading-none">
-                           {{ number_format($totalMovement, 0, ',', '.') }}
+                <div class="w-full bg-orange-50 border border-orange-100 rounded-2xl p-6 flex flex-col items-center">
+                    <span class="text-slate-600 text-sm uppercase tracking-widest font-bold mb-1">Total Traffic</span>
+                    <div class="h-0.5 w-24 bg-orange-500 mx-auto mb-3 rounded-full"></div>
+                    <div class="flex items-baseline gap-3">
+                        <span class="text-5xl font-black text-slate-900 leading-none">
+                            {{ number_format($totalMovement, 0, ',', '.') }}
                         </span>
-                        <span class="text-sm font-medium text-slate-400 italic">Movements</span>
+                        <span class="text-base font-semibold text-slate-400 italic">Movements</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Peak Window + Aircraft Mix + Top Airlines + Top Routes -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Peak Window + Aircraft Mix -->
+            <div class="bg-white rounded-[1.75rem] p-8 shadow-xl border border-slate-100 flex flex-col gap-8">
+                <!-- Peak Window -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-base font-black text-slate-800 uppercase tracking-tight">Traffic Peak Window</h4>
+                        <span class="text-xs bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-bold">Busiest Period</span>
+                    </div>
+                    <div class="flex items-end justify-between gap-1 h-32 mb-3">
+                        @foreach($peakHeights as $height)
+                            <div class="bg-orange-100 hover:bg-orange-500 w-full rounded-t transition-all duration-300"
+                                style="height: {{ $height }}%"></div>
+                        @endforeach
+                    </div>
+                    <div class="flex justify-between text-xs font-bold text-slate-400">
+                        <span>00:00</span>
+                        <span class="text-orange-600 font-black">PEAK: {{ $peakStart }} – {{ $peakEnd }}</span>
+                        <span>23:59</span>
+                    </div>
+                </div>
+
+                <!-- Aircraft Category Mix -->
+                <div class="flex-grow">
+                    <h4 class="text-base font-black text-slate-800 uppercase mb-5">Aircraft Category Mix</h4>
+                    <div class="space-y-5">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1.5">
+                                <span class="font-bold text-slate-600">HEAVY (B777, A350, etc)</span>
+                                <span class="font-black text-slate-900">{{ $heavyPercentage }}%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                                <div class="bg-orange-600 h-full rounded-full" style="width: {{ $heavyPercentage }}%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1.5">
+                                <span class="font-bold text-slate-600">MEDIUM (B737, A320)</span>
+                                <span class="font-black text-slate-900">{{ $mediumPercentage }}%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                                <div class="bg-yellow-400 h-full rounded-full" style="width: {{ $mediumPercentage }}%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1.5">
+                                <span class="font-bold text-slate-600">LIGHT / OTHERS</span>
+                                <span class="font-black text-slate-900">{{ $lightPercentage }}%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                                <div class="bg-slate-300 h-full rounded-full" style="width: {{ $lightPercentage }}%"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <section class="space-y-8">
-                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 h-full flex flex-col">
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="text-sm font-bold text-slate-800 uppercase tracking-tight">Traffic Peak Window</h4>
-                            <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md font-bold italic">Busiest Period</span>
-                        </div>
-                        
-                        <div class="flex items-end justify-between gap-1 h-24 mb-2">
-                            @foreach($peakHeights as $height)
-                                <div class="bg-orange-100 hover:bg-orange-500 w-full rounded-t-sm transition-all duration-300" 
-                                    style="height: {{ $height }}%"></div>
-                            @endforeach
-                        </div>
-                        <div class="flex justify-between text-[9px] font-bold text-slate-400">
-                            <span>00:00</span>
-                            <span class="text-orange-600 font-black">PEAK: {{ $peakStart }} - {{ $peakEnd }}</span>
-                            <span>23:59</span>
-                        </div>
-                    </div>
-
-                    <div class="flex-grow">
-                        <h4 class="text-sm font-bold text-slate-800 uppercase mb-4">Aircraft Category Mix</h4>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex justify-between text-[10px] mb-1">
-                                    <span class="font-bold text-slate-600">HEAVY (B777, A350, etc)</span>
-                                    <span class="font-black text-slate-900">{{ $heavyPercentage }}%</span>
-                                </div>
-                                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-orange-600 h-full rounded-full" style="width: {{ $heavyPercentage }}%"></div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div class="flex justify-between text-[10px] mb-1">
-                                    <span class="font-bold text-slate-600">MEDIUM (B737, A320)</span>
-                                    <span class="font-black text-slate-900">{{ $mediumPercentage }}%</span>
-                                </div>
-                                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-yellow-400 h-full rounded-full" style="width: {{ $mediumPercentage }}%"></div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div class="flex justify-between text-[10px] mb-1">
-                                    <span class="font-bold text-slate-600">LIGHT / OTHERS</span>
-                                    <span class="font-black text-slate-900">{{ $lightPercentage }}%</span>
-                                </div>
-                                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-slate-300 h-full rounded-full" style="width: {{ $lightPercentage }}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>  
-
-
-            <div class="bg-white rounded-xl shadow-sm px-5 py-4">
-                <!-- Header -->
-                <div class="flex items-center justify-between mb-4">
-                    <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                        Top Airlines by Flight Movement
-                    </p>
-                </div>
-
-                <!-- Table -->
-                <div class="overflow-hidden rounded-lg border border-slate-200">
-                    <table class="w-full text-sm">
-                        <thead class="bg-slate-50 text-slate-600">
+            <!-- Top Airlines -->
+            <div class="bg-white rounded-[1.75rem] shadow-xl border border-slate-100 p-8">
+                <h4 class="text-base font-black text-slate-800 uppercase tracking-tight mb-5">Top Airlines by Movement</h4>
+                <div class="overflow-hidden rounded-xl border border-slate-200">
+                    <table class="w-full text-base">
+                        <thead class="bg-slate-50 text-slate-500">
                             <tr>
-                                <th class="text-left px-3 py-2 font-medium">Airline</th>
-                                <th class="text-left px-3 py-2 font-medium">Bars</th>
-                                <th class="text-right px-3 py-2 font-medium">Jumlah</th>
-                                <th class="text-right px-3 py-2 font-medium">%</th>
+                                <th class="text-left px-5 py-3 font-bold">Airline</th>
+                                <th class="text-left px-5 py-3 font-bold">Bar</th>
+                                <th class="text-right px-5 py-3 font-bold">Jumlah</th>
+                                <th class="text-right px-5 py-3 font-bold">%</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
-                            <!-- Row -->
-                            <!-- TOP Airlines Table -->
-                            @foreach($topTrafficAirlines as $index => $airline)
-                            <tr>
-                                <td class="px-3 py-2">{{ $airline['name'] }}</td>
-                                <td class="px-3 py-2">
-                                    <div class="w-full bg-slate-200 rounded h-3">
-                                        <div class="bg-orange-400 h-3 rounded" style="width: {{ $airline['bar_width'] }}%"></div>
+                            @foreach($topTrafficAirlines as $airline)
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="px-5 py-3 font-semibold text-slate-700">{{ $airline['name'] }}</td>
+                                <td class="px-5 py-3">
+                                    <div class="w-full bg-slate-200 rounded-full h-4">
+                                        <div class="bg-orange-400 h-4 rounded-full" style="width: {{ $airline['bar_width'] }}%"></div>
                                     </div>
                                 </td>
-                                <td class="px-3 py-2 text-right font-medium">{{ number_format($airline['count']) }}</td>
-                                <td class="px-3 py-2 text-right text-slate-500">{{ $airline['percentage'] }}%</td>
+                                <td class="px-5 py-3 text-right font-bold text-slate-800">{{ number_format($airline['count']) }}</td>
+                                <td class="px-5 py-3 text-right font-bold text-slate-500">{{ $airline['percentage'] }}%</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -172,37 +156,30 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm px-5 py-4">
-                <!-- Header -->
-                <div class="flex items-center justify-between mb-4">
-                    <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                        Top Flight Route by Movement
-                    </p>
-                </div>
-
-                <!-- Table -->
-                <div class="overflow-hidden rounded-lg border border-slate-200">
-                    <table class="w-full text-sm">
-                        <thead class="bg-slate-50 text-slate-600">
+            <!-- Top Routes -->
+            <div class="bg-white rounded-[1.75rem] shadow-xl border border-slate-100 p-8">
+                <h4 class="text-base font-black text-slate-800 uppercase tracking-tight mb-5">Top Flight Routes</h4>
+                <div class="overflow-hidden rounded-xl border border-slate-200">
+                    <table class="w-full text-base">
+                        <thead class="bg-slate-50 text-slate-500">
                             <tr>
-                                <th class="text-left px-3 py-2 font-medium">Flight Route</th>
-                                <th class="text-left px-3 py-2 font-medium">Bars</th>
-                                <th class="text-right px-3 py-2 font-medium">Jumlah</th>
-                                <th class="text-right px-3 py-2 font-medium">%</th>
+                                <th class="text-left px-5 py-3 font-bold">Route</th>
+                                <th class="text-left px-5 py-3 font-bold">Bar</th>
+                                <th class="text-right px-5 py-3 font-bold">Jumlah</th>
+                                <th class="text-right px-5 py-3 font-bold">%</th>
                             </tr>
                         </thead>
-
                         <tbody class="divide-y divide-slate-100">
                             @foreach($topTrafficRoutes as $route)
-                            <tr>
-                                <td class="px-3 py-2">{{ $route['route'] }}</td>
-                                <td class="px-3 py-2">
-                                    <div class="w-full bg-slate-200 rounded h-3">
-                                        <div class="bg-orange-400 h-3 rounded" style="width: {{ $route['bar_width'] }}%"></div>
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="px-5 py-3 font-semibold text-slate-700">{{ $route['route'] }}</td>
+                                <td class="px-5 py-3">
+                                    <div class="w-full bg-slate-200 rounded-full h-4">
+                                        <div class="bg-orange-400 h-4 rounded-full" style="width: {{ $route['bar_width'] }}%"></div>
                                     </div>
                                 </td>
-                                <td class="px-3 py-2 text-right font-medium">{{ number_format($route['count']) }}</td>
-                                <td class="px-3 py-2 text-right text-slate-500">{{ $route['percentage'] }}%</td>
+                                <td class="px-5 py-3 text-right font-bold text-slate-800">{{ number_format($route['count']) }}</td>
+                                <td class="px-5 py-3 text-right font-bold text-slate-500">{{ $route['percentage'] }}%</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -210,148 +187,130 @@
                 </div>
             </div>
         </div>
-        <p></p>
+
     </section>
+
     <!-- ========================= ENROUTE ========================= -->
-    <section class="space-y-6">
-        <div class="mb-4">
-            <h2 class="flex items-center gap-3 text-2xl font-semibold text-slate-800">
+
+    <section class="space-y-8 px-6 sm:px-10 lg:px-14 w-full pb-12">
+        <div class="mb-2">
+            <h2 class="flex items-center gap-4 text-[42px] font-black text-slate-800 tracking-tight">
                 <span>Enroute Revenue</span>
-                <span class="hidden sm:block w-px h-5 bg-slate-300"></span>
-               <div class="inline-flex items-center gap-1">
-                    <span class="inline-flex items-center bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
-                        Updated
-                    </span>
-                    <span class="inline-flex items-center bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-1.5 rounded-full uppercase tracking-wide leading-none">
-                        {{ $periodenroute }}
-                    </span>
+                <span class="hidden sm:block w-px h-7 bg-slate-300"></span>
+                <div class="inline-flex items-center gap-2">
+                    <span class="inline-flex items-center bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">Updated</span>
+                    <span class="inline-flex items-center bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">{{ $periodenroute }}</span>
                 </div>
             </h2>
-            <div class="mt-2 h-1 w-16 bg-gradient-to-r from-blue-600 to-sky-100 rounded-full"></div>
+            <div class="mt-3 h-1.5 w-20 bg-gradient-to-r from-blue-600 to-sky-300 rounded-full"></div>
         </div>
-        <!-- KPI + DONUT -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
+        <!-- KPI Cards Enroute -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Enroute Movement -->
+            <div class="bg-white rounded-[1.5rem] shadow-xl border border-slate-100 px-8 py-7 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                        Enroute Movement
-                    </p>
-                    <p class="text-3xl font-black text-slate-800 leading-none">
+                    <p class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Enroute Movement</p>
+                    <p class="text-5xl font-black text-slate-800 leading-none">
                         {{ number_format($enrouteMovement, 0, ',', '.') }}
                     </p>
                 </div>
-                <div class="h-11 w-11 rounded-lg bg-sky-200 flex items-center justify-center text-blue-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                <div class="h-16 w-16 rounded-2xl bg-sky-100 flex items-center justify-center text-blue-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                     </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
+
+            <!-- Total Route Unit -->
+            <div class="bg-white rounded-[1.5rem] shadow-xl border border-slate-100 px-8 py-7 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                        Enroute - Total of Route Unit
-                    </p>
-                    <p class="text-2xl font-bold text-slate-800 mt-1">
+                    <p class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Total Route Unit</p>
+                    <p class="text-5xl font-black text-slate-800 leading-none">
                         {{ number_format($totalRouteUnit, 0, ',', '.') }}
                     </p>
                 </div>
-                <div class="h-11 w-11 rounded-lg bg-sky-200 flex items-center justify-center text-blue-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6a2 2 0 104 0 2 2 0 00-4 0zm12 6a2 2 0 104 0 2 2 0 00-4 0zM4 18a2 2 0 104 0 2 2 0 00-4 0zm4-12l8 6-8 6"/>
+                <div class="h-16 w-16 rounded-2xl bg-sky-100 flex items-center justify-center text-blue-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 104 0 2 2 0 00-4 0zm12 6a2 2 0 104 0 2 2 0 00-4 0zM4 18a2 2 0 104 0 2 2 0 00-4 0zm4-12l8 6-8 6"/>
                     </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between">
+
+            <!-- Estimate Revenue -->
+            <div class="bg-white rounded-[1.5rem] shadow-xl border border-slate-100 px-8 py-7 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                        Estimate Enroute - Total of Revenue
-                    </p>
+                    <p class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Estimate Total Revenue</p>
                     <p class="text-3xl font-black text-slate-800 leading-none">
                         Rp {{ number_format($totalRevenueIdr, 0, ',', '.') }}
                     </p>
                 </div>
-                <div class="h-11 w-11 rounded-lg bg-sky-200 flex items-center justify-center text-blue-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2
-                            3 .895 3 2-1.343 2-3 2m0-10v1m0 10v1
-                            m9-6a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                <div class="h-16 w-16 rounded-2xl bg-sky-100 flex items-center justify-center text-blue-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
             </div>
+
             <div class="bg-white rounded-[1rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 relative overflow-hidden">
                 {{-- Header --}}
-                <div class="text-center relative z-10 mb-0"> {{-- Margin bottom dicabut --}}
-                    <h3 class="text-m font-black text-slate-800 tracking-tight uppercase">Estimate Revenue Enroute Composition</h3>
-                    <div class="h-0.5 w-12 bg-blue-600 mx-auto mt-2 rounded-full"></div>
+                <div class="text-center relative z-10 mb-4">
+                    <h3 class="text-xl font-black text-slate-800 tracking-tight uppercase">Estimate Revenue Enroute Composition</h3>
+                    <div class="h-1 w-14 bg-blue-600 mx-auto mt-3 rounded-full"></div>
                 </div>
 
                 {{-- Chart Container --}}
-                {{-- Kita gunakan minus margin atau padding 0 agar grafik lebih rapat --}}
-                <div class="relative h-60 w-full flex justify-center items-center group -mt-2 -mb-2"> 
-                    <canvas id="donutEnroute" 
-                            data-dom="{{ $domPercentage ?? 0 }}" 
+                <div class="relative h-72 w-full flex justify-center items-center group">
+                    <canvas id="donutEnroute"
+                            data-dom="{{ $domPercentage ?? 0 }}"
                             data-int="{{ $intPercentage ?? 0 }}">
                     </canvas>
                     {{-- Center Text --}}
                     <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.5em]">Total</span>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total</span>
                     </div>
                 </div>
 
-                {{-- Financial Details Section --}}
-                <div class="space-y-3 relative z-10">
-                    {{-- Row 1: IDR (Domestic) --}}
-                    <div class="flex items-center justify-between p-4 bg-slate-50/50 hover:bg-blue-50/50 border border-transparent hover:border-blue-100 rounded-[2rem] transition-all duration-300 group">
+                {{-- Financial Details --}}
+                <div class="space-y-4 relative z-10">
+                    {{-- IDR --}}
+                    <div class="flex items-center justify-between p-5 bg-slate-50 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-2xl transition-all duration-300 group">
                         <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-xl bg-blue-600 shadow-lg shadow-blue-200 flex items-center justify-center text-white transition-transform group-hover:scale-110">
-                                <span class="font-bold text-sm tracking-tighter">Rp</span>
+                            <div class="w-12 h-12 rounded-xl bg-blue-600 shadow-lg shadow-blue-200 flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                                <span class="font-bold text-base">Rp</span>
                             </div>
                             <div>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Revenue in IDR</p>
-                                <p class="text-base font-black text-slate-800 leading-tight">Rp {{ number_format($enctotalIdrOriginal ?? 0, 0, ',', '.') }}</p>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-0.5">Revenue in IDR</p>
+                                <p class="text-lg font-black text-slate-800">Rp {{ number_format($enctotalIdrOriginal ?? 0, 0, ',', '.') }}</p>
                             </div>
                         </div>
-                        {{-- Tambahan Persentase agar lebih informatif --}}
-                        <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase">{{ $domPercentage ?? 0 }}%</span>
+                        <span class="text-sm font-black text-blue-600 bg-blue-50 px-4 py-1.5 rounded-full uppercase">{{ $domPercentage ?? 0 }}%</span>
                     </div>
 
-                    {{-- Row 2: USD (International) --}}
-                    <div class="flex items-center justify-between p-4 bg-slate-50/50 hover:bg-sky-50/50 border border-transparent hover:border-sky-100 rounded-[2rem] transition-all duration-300 group">
+                    {{-- USD --}}
+                    <div class="flex items-center justify-between p-5 bg-slate-50 hover:bg-sky-50 border border-transparent hover:border-sky-100 rounded-2xl transition-all duration-300 group">
                         <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-xl bg-sky-400 shadow-lg shadow-sky-100 flex items-center justify-center text-white transition-transform group-hover:scale-110">
+                            <div class="w-12 h-12 rounded-xl bg-sky-400 shadow-lg shadow-sky-100 flex items-center justify-center text-white transition-transform group-hover:scale-110">
                                 <span class="font-bold text-xl">$</span>
                             </div>
                             <div>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Revenue in USD</p>
-                                <p class="text-base font-black text-slate-800 leading-tight">$ {{ number_format($enctotalUsdOriginal ?? 0, 2, '.', ',') }}</p>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-0.5">Revenue in USD</p>
+                                <p class="text-lg font-black text-slate-800">$ {{ number_format($enctotalUsdOriginal ?? 0, 2, '.', ',') }}</p>
                             </div>
                         </div>
                         <div class="text-right">
-                            <p class="text-[9px] font-bold text-sky-500 uppercase tracking-tighter">Equiv. to IDR</p>
-                            <p class="text-[11px] font-black text-slate-600">Rp {{ number_format($enctotalUsdConverted, 0, ',', '.') }}</p>
+                            <p class="text-xs font-bold text-sky-500 uppercase">Equiv. IDR</p>
+                            <p class="text-sm font-black text-slate-600">Rp {{ number_format($enctotalUsdConverted, 0, ',', '.') }}</p>
                         </div>
                     </div>
 
-                    {{-- Footer Info --}}
+                    {{-- Footer --}}
                     <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
                         <div class="flex items-center gap-2">
-                            <div class="w-2 h-2 rounded-full bg-slate-300 animate-pulse"></div>
-                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter italic">
-                                Rate: 1 USD = sesuai tanggal Dof
-                            </span>
+                            <div class="w-2.5 h-2.5 rounded-full bg-slate-300 animate-pulse"></div>
+                            <span class="text-xs font-bold text-slate-400 uppercase italic">Rate: 1 USD = sesuai tanggal Dof</span>
                         </div>
-                        <div class="flex items-center gap-1.5 opacity-60">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 00-2 2z" />
-                            </svg>
-                            <span class="text-[9px] font-bold text-slate-400 uppercase">
-                                {{ $recordDate ?? now()->format('d M Y') }}
-                            </span>
-                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase">{{ $recordDate ?? now()->format('d M Y') }}</span>
+
                     </div>
                 </div>
             </div>
