@@ -66,58 +66,58 @@ class extends Component {
     }
 
     private function parseDate($value)
-{
-    if (empty($value)) {
-        \Log::info("parseDate: empty value");
-        return null;
-    }
-    
-    $value = trim($value);
-    \Log::info("parseDate - raw value: " . $value);
-    
-    // Format Y-m-d (2026-01-31) - PALING UMUM
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-        \Log::info("parseDate: Y-m-d format detected");
-        return $value;
-    }
-    
-    // Format Y-m-d H:i:s (2026-01-31 00:00:00)
-    if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value)) {
-        $datePart = explode(' ', $value)[0];
-        \Log::info("parseDate: datetime format detected, date part: " . $datePart);
-        return $datePart;
-    }
-    
-    // Excel serial date (numeric)
-    if (is_numeric($value)) {
-        try {
-            $date = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
-            $result = $date->format('Y-m-d');
-            \Log::info("parseDate: Excel serial date converted to: " . $result);
-            return $result;
-        } catch (\Exception $e) {
-            \Log::warning("parseDate: Excel conversion failed: " . $e->getMessage());
+    {
+        if (empty($value)) {
+            \Log::info("parseDate: empty value");
             return null;
         }
+        
+        $value = trim($value);
+        \Log::info("parseDate - raw value: " . $value);
+        
+        // Format Y-m-d (2026-01-31) - PALING UMUM
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            \Log::info("parseDate: Y-m-d format detected");
+            return $value;
+        }
+        
+        // Format Y-m-d H:i:s (2026-01-31 00:00:00)
+        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value)) {
+            $datePart = explode(' ', $value)[0];
+            \Log::info("parseDate: datetime format detected, date part: " . $datePart);
+            return $datePart;
+        }
+        
+        // Excel serial date (numeric)
+        if (is_numeric($value)) {
+            try {
+                $date = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
+                $result = $date->format('Y-m-d');
+                \Log::info("parseDate: Excel serial date converted to: " . $result);
+                return $result;
+            } catch (\Exception $e) {
+                \Log::warning("parseDate: Excel conversion failed: " . $e->getMessage());
+                return null;
+            }
+        }
+        
+        // Format dd/mm/yyyy (31/01/2026)
+        if (preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $value)) {
+            $parts = explode('/', $value);
+            $result = $parts[2] . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[0], 2, '0', STR_PAD_LEFT);
+            \Log::info("parseDate: dd/mm/yyyy converted to: " . $result);
+            return $result;
+        }
+        
+        \Log::warning("parseDate: UNRECOGNIZED FORMAT - " . $value);
+        return null;
     }
-    
-    // Format dd/mm/yyyy (31/01/2026)
-    if (preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $value)) {
-        $parts = explode('/', $value);
-        $result = $parts[2] . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[0], 2, '0', STR_PAD_LEFT);
-        \Log::info("parseDate: dd/mm/yyyy converted to: " . $result);
-        return $result;
-    }
-    
-    \Log::warning("parseDate: UNRECOGNIZED FORMAT - " . $value);
-    return null;
-}
     
     public function prosesImport()
     {
         try {
             $this->validate([
-                'fileImport' => 'required|file|max:20480'  // ← 20MB
+                'fileImport' => 'required|file|max:102400'  // ← 20MB
             ]);
             
             $extension = $this->fileImport->getClientOriginalExtension();
