@@ -361,6 +361,45 @@ document.addEventListener('alpine:init', () => {
         }
     }));
 @endforeach
+
+@foreach($groupedItems as $catName => $catItems)
+@php
+    $catId = str_replace([' ','-'], '_', Str::slug($catName));
+@endphp
+    Alpine.data('sum_cat_{{ $catId }}', () => ({
+        isOpen: true,
+        rawData: {!! json_encode($catItems) !!},
+        sortCol: '',
+        sortDir: 'desc',
+        pct(a,b) { return b > 0 ? (a/b*100) : 0; },
+        fmt(v) { return 'Rp ' + Math.round(v).toLocaleString('id-ID'); },
+        get sortedRows() {
+            if (!this.sortCol) return this.rawData;
+            return [...this.rawData].sort((a,b) => {
+                let va, vb;
+                if (this.sortCol === 'serapan_pct') {
+                    va = this.pct(a.consume, a.release);
+                    vb = this.pct(b.consume, b.release);
+                } else {
+                    va = a[this.sortCol] ?? 0;
+                    vb = b[this.sortCol] ?? 0;
+                }
+                if (typeof va === 'string') {
+                    return this.sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+                }
+                return this.sortDir === 'desc' ? vb - va : va - vb;
+            });
+        },
+        setSort(col) {
+            if(this.sortCol === col) this.sortDir = this.sortDir === 'desc' ? 'asc' : 'desc';
+            else { this.sortCol = col; this.sortDir = 'desc'; }
+        },
+        sortIcon(col) {
+            if(this.sortCol !== col) return '↕';
+            return this.sortDir === 'desc' ? '↓' : '↑';
+        }
+    }));
+@endforeach
 });
 
 // ===== Summary donut charts (rendered after DOM ready) =====
@@ -474,6 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="bg-white rounded-[18px] p-6 border-l-[6px] border-l-[#0f172a] shadow-sm flex flex-col justify-between">
                 <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">RKAP</p>
                 <p class="text-3xl font-black text-slate-800 mt-3">{{ fmtCard($sumRkap) }}</p>
+                <p class="text-sm font-semibold text-transparent mt-2 select-none">&nbsp;</p>
             </div>
             <div class="bg-white rounded-[18px] p-6 border-l-[6px] border-l-[#2563eb] shadow-sm flex flex-col justify-between">
                 <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">Release Budget</p>
@@ -552,8 +592,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 $c          = $groupIconColors[$catName];
             @endphp
 
+            @php
+                $catId = str_replace([' ','-'], '_', Str::slug($catName));
+            @endphp
             {{-- Group Card with Accordion Toggle --}}
-            <div x-data="{ isOpen: false }" class="border border-slate-100 rounded-2xl bg-slate-50/10 p-5 shadow-sm transition-all duration-300">
+            <div x-data="sum_cat_{{ $catId }}" class="border border-slate-100 rounded-2xl bg-slate-50/10 p-5 shadow-sm transition-all duration-300">
                 {{-- Group Header (Clickable) --}}
                 <div @click="isOpen = !isOpen" class="flex items-center gap-3 cursor-pointer select-none group">
                     <div class="w-2.5 h-2.5 rounded-full {{ $c['bg'] }}"></div>
@@ -577,56 +620,53 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm whitespace-nowrap min-w-[800px]">
                             <thead>
-                                <tr class="text-xs font-bold text-slate-400 uppercase border-b border-slate-200">
-                                    <th class="py-2 px-4">Funds Center</th>
-                                    <th class="py-2 px-4 text-right">RKAP</th>
-                                    <th class="py-2 px-4 text-right">Release</th>
-                                    <th class="py-2 px-4 text-right">Consume</th>
-                                    <th class="py-2 px-4 text-right">Available</th>
-                                    <th class="py-2 px-4 text-right">Commit</th>
-                                    <th class="py-2 px-4 w-40">Serapan</th>
-                                    <th class="py-2 px-4 text-right">%</th>
+                                <tr class="text-[13px] font-extrabold text-slate-500 uppercase border-b border-slate-200 tracking-wider">
+                                    <th class="py-2 px-4 cursor-pointer hover:text-slate-700 transition select-none" @click="setSort('name')">
+                                        Funds Center <span class="ml-1 inline-block text-[10px]" x-text="sortIcon('name')"></span>
+                                    </th>
+                                    <th class="py-2 px-4 text-right cursor-pointer hover:text-slate-700 transition select-none" @click="setSort('rkap')">
+                                        RKAP <span class="ml-1 inline-block text-[10px]" x-text="sortIcon('rkap')"></span>
+                                    </th>
+                                    <th class="py-2 px-4 text-right cursor-pointer hover:text-slate-700 transition select-none" @click="setSort('release')">
+                                        Release <span class="ml-1 inline-block text-[10px]" x-text="sortIcon('release')"></span>
+                                    </th>
+                                    <th class="py-2 px-4 text-right cursor-pointer hover:text-slate-700 transition select-none" @click="setSort('consume')">
+                                        Consume <span class="ml-1 inline-block text-[10px]" x-text="sortIcon('consume')"></span>
+                                    </th>
+                                    <th class="py-2 px-4 text-right cursor-pointer hover:text-slate-700 transition select-none" @click="setSort('available')">
+                                        Available <span class="ml-1 inline-block text-[10px]" x-text="sortIcon('available')"></span>
+                                    </th>
+                                    <th class="py-2 px-4 text-right cursor-pointer hover:text-slate-700 transition select-none" @click="setSort('commitment')">
+                                        Commit <span class="ml-1 inline-block text-[10px]" x-text="sortIcon('commitment')"></span>
+                                    </th>
+                                    <th class="py-2 px-4 w-40 cursor-pointer hover:text-slate-700 transition select-none" @click="setSort('serapan_pct')">
+                                        Serapan <span class="ml-1 inline-block text-[10px]" x-text="sortIcon('serapan_pct')"></span>
+                                    </th>
+                                    <th class="py-2 px-4 text-right cursor-pointer hover:text-slate-700 transition select-none" @click="setSort('serapan_pct')">
+                                        % <span class="ml-1 inline-block text-[10px]" x-text="sortIcon('serapan_pct')"></span>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
-                                @foreach($catItems as $itm)
-                                @php
-                                    $iPct = ($itm['release'] ?? 0) > 0 ? (($itm['consume'] ?? 0) / $itm['release'] * 100) : 0;
-                                    $barClass = $iPct >= 90 ? 'bg-red-500' : ($iPct >= 60 ? 'bg-emerald-500' : ($iPct >= 30 ? 'bg-blue-500' : 'bg-slate-300'));
-                                @endphp
-                                <tr class="hover:bg-slate-50/80 transition-colors">
-                                    <td class="py-3 px-4">
-                                        <p class="font-bold text-slate-700">{{ $itm['name'] }}</p>
-                                        <p class="text-xs text-slate-400">{{ $itm['code'] }}</p>
-                                    </td>
-                                    <td class="py-3 px-4 text-right font-medium text-slate-600">{{ fmtCard($itm['rkap'] ?? 0) }}</td>
-                                    <td class="py-3 px-4 text-right font-medium text-slate-600">{{ fmtCard($itm['release'] ?? 0) }}</td>
-                                    <td class="py-3 px-4 text-right font-medium text-slate-600">{{ fmtCard($itm['consume'] ?? 0) }}</td>
-                                    <td class="py-3 px-4 text-right font-medium text-slate-600">{{ fmtCard($itm['available'] ?? 0) }}</td>
-                                    <td class="py-3 px-4 text-right font-medium text-slate-600">{{ fmtCard($itm['commitment'] ?? 0) }}</td>
-                                    <td class="py-3 px-4">
-                                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                                            <div class="h-full {{ $barClass }} transition-all duration-300" style="width:{{ min(100,$iPct) }}%"></div>
-                                        </div>
-                                    </td>
-                                    <td class="py-3 px-4 text-right font-bold text-slate-700">{{ number_format($iPct,1,',','.') }}%</td>
-                                </tr>
-                                @endforeach
-                                {{-- Subtotal row --}}
-                                <tr class="bg-slate-50 font-black text-slate-700 border-t-2 border-slate-200">
-                                    <td class="py-2 px-4 text-xs uppercase tracking-widest text-slate-500">Subtotal {{ $catName }}</td>
-                                    <td class="py-2 px-4 text-right text-xs">{{ fmtCard($catRkap) }}</td>
-                                    <td class="py-2 px-4 text-right text-xs">{{ fmtCard($catRelease) }}</td>
-                                    <td class="py-2 px-4 text-right text-xs">{{ fmtCard($catConsume) }}</td>
-                                    <td class="py-2 px-4 text-right text-xs">{{ fmtCard($catAvail) }}</td>
-                                    <td class="py-2 px-4 text-right text-xs">{{ fmtCard($catCommit) }}</td>
-                                    <td class="py-2 px-4">
-                                        <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
-                                            <div class="h-full {{ $c['bg'] }} rounded-full" style="width: {{ min(100,$catPct) }}%"></div>
-                                        </div>
-                                    </td>
-                                    <td class="py-2 px-4 text-right text-xs {{ $c['text'] }}">{{ number_format($catPct,1,',','.') }}%</td>
-                                </tr>
+                                <template x-for="(r, index) in sortedRows" :key="index">
+                                    <tr class="hover:bg-slate-50/80 transition-colors">
+                                        <td class="py-3 px-4">
+                                            <p class="text-base font-extrabold text-slate-800" x-text="r.name"></p>
+                                            <p class="text-sm font-medium text-slate-500 mt-0.5" x-text="r.code"></p>
+                                        </td>
+                                        <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.rkap)"></td>
+                                        <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.release)"></td>
+                                        <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.consume)"></td>
+                                        <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.available)"></td>
+                                        <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.commitment)"></td>
+                                        <td class="py-3.5 px-4">
+                                            <div class="w-full bg-slate-200/70 h-3 rounded-full overflow-hidden">
+                                                <div class="h-full transition-all duration-300" :class="pct(r.consume,r.release)>=90 ? 'bg-[#dc2626]' : pct(r.consume,r.release)>=60 ? 'bg-[#16a34a]' : pct(r.consume,r.release)>=30 ? 'bg-[#2563eb]' : 'bg-[#94a3b8]'" :style="'width:'+Math.min(100, pct(r.consume,r.release))+'%'"></div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3.5 px-4 text-right text-[15px] font-black text-slate-800" x-text="pct(r.consume,r.release).toFixed(1)+'%'"></td>
+                                    </tr>
+                                </template>
                             </tbody>
                         </table>
                     </div>
@@ -663,6 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="bg-white rounded-[18px] p-6 border-l-[6px] border-l-[#0f172a] shadow-sm flex flex-col justify-between">
                 <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">RKAP</p>
                 <p class="text-3xl font-black text-slate-800 mt-3">{{ fmtCard($rkap) }}</p>
+                <p class="text-sm font-semibold text-transparent mt-2 select-none">&nbsp;</p>
             </div>
             <!-- Release -->
             <div class="bg-white rounded-[18px] p-6 border-l-[6px] border-l-[#2563eb] shadow-sm flex flex-col justify-between">
@@ -773,7 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm whitespace-nowrap min-w-[800px]">
                     <thead>
-                        <tr class="text-xs font-bold text-slate-400 uppercase border-b border-slate-200">
+                        <tr class="text-[13px] font-extrabold text-slate-500 uppercase border-b border-slate-200 tracking-wider">
                             <th class="py-3 px-4 cursor-pointer hover:text-slate-700 transition select-none" @click="setSort('name')">
                                 Funds Center <span class="ml-1 inline-block text-[10px]" x-text="sortIcon('name')"></span>
                             </th>
@@ -801,23 +842,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        <template x-for="r in filteredRows" :key="r.code">
+                        <template x-for="(r, index) in filteredRows" :key="index">
                             <tr class="hover:bg-slate-50/80 transition-colors">
                                 <td class="py-3 px-4">
-                                    <p class="font-bold text-slate-700" x-text="r.name"></p>
-                                    <p class="text-xs text-slate-400" x-text="r.code"></p>
+                                    <p class="text-base font-extrabold text-slate-800" x-text="r.name"></p>
+                                    <p class="text-sm font-medium text-slate-500 mt-0.5" x-text="r.code"></p>
                                 </td>
-                                <td class="py-3 px-4 text-right font-medium text-slate-600" x-text="fmt(r.rkap)"></td>
-                                <td class="py-3 px-4 text-right font-medium text-slate-600" x-text="fmt(r.release)"></td>
-                                <td class="py-3 px-4 text-right font-medium text-slate-600" x-text="fmt(r.consume)"></td>
-                                <td class="py-3 px-4 text-right font-medium text-slate-600" x-text="fmt(r.available)"></td>
-                                <td class="py-3 px-4 text-right font-medium text-slate-600" x-text="fmt(r.commitment)"></td>
-                                <td class="py-3 px-4">
-                                    <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.rkap)"></td>
+                                <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.release)"></td>
+                                <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.consume)"></td>
+                                <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.available)"></td>
+                                <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.commitment)"></td>
+                                <td class="py-3.5 px-4">
+                                    <div class="w-full bg-slate-200/70 h-3 rounded-full overflow-hidden">
                                         <div class="h-full transition-all duration-300" :class="pct(r.consume,r.release)>=90 ? 'bg-[#dc2626]' : pct(r.consume,r.release)>=60 ? 'bg-[#16a34a]' : pct(r.consume,r.release)>=30 ? 'bg-[#2563eb]' : 'bg-[#94a3b8]'" :style="'width:'+Math.min(100, pct(r.consume,r.release))+'%'"></div>
                                     </div>
                                 </td>
-                                <td class="py-3 px-4 text-right font-bold text-slate-700" x-text="pct(r.consume,r.release).toFixed(1)+'%'"></td>
+                                <td class="py-3.5 px-4 text-right text-[15px] font-black text-slate-800" x-text="pct(r.consume,r.release).toFixed(1)+'%'"></td>
                             </tr>
                         </template>
                         <template x-if="filteredRows.length === 0">
