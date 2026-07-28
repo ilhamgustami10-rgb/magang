@@ -23,7 +23,7 @@ class DashboardController extends Controller
             ['label' => 'Traffic Movement', 'records' => TrafficData::count(), 'uploads' => TrafficUpload::count(), 'route' => 'admin.traffic.index'],
             ['label' => 'Enroute', 'records' => EnrouteData::count(), 'uploads' => EnrouteUpload::count(), 'route' => 'admin.enroutes.index'],
             ['label' => 'Terminal', 'records' => TerminalData::count(), 'uploads' => TerminalUpload::count(), 'route' => 'admin.terminals.index'],
-            ['label' => 'Finance', 'records' => FinanceData::count(), 'uploads' => null, 'route' => 'admin.finances.index'],
+            ['label' => 'Finance', 'records' => \App\Models\FinanceItem::count(), 'uploads' => \App\Models\FinanceUpload::count(), 'route' => 'admin.finances.index'],
         ];
 
         return view('admin.dashboard', [
@@ -31,7 +31,7 @@ class DashboardController extends Controller
             'totalRecords' => collect($sources)->sum('records'),
             'lastInputAt' => collect([
                 TrafficData::max('updated_at'), EnrouteData::max('updated_at'),
-                TerminalData::max('updated_at'), FinanceData::max('updated_at'), Airline::max('updated_at'),
+                TerminalData::max('updated_at'), \App\Models\FinanceItem::max('updated_at'), Airline::max('updated_at'),
             ])->filter()->max(),
         ]);
     }
@@ -496,10 +496,18 @@ class DashboardController extends Controller
         // Period Terminal
         $latestDatetraffic = TrafficData::max('tanggal');
         $periodtraffic = $latestDatetraffic ? Carbon::parse($latestDatetraffic)->format('d M Y') : 'Aug 2026';
+
+        $activeTrafficFiles = TrafficUpload::latest('tanggal_jam')->pluck('file_name')->toArray();
+        $activeEnrouteFiles = EnrouteUpload::latest('tanggal_jam')->pluck('file_name')->toArray();
+        $activeTerminalFiles = TerminalUpload::latest('tanggal_jam')->pluck('file_name')->toArray();
+
         // ============================================
         // PASS KE VIEW
         // ============================================
         return view('traffic', compact(
+            'activeTrafficFiles',
+            'activeEnrouteFiles',
+            'activeTerminalFiles',
             // Enroute
             'enrouteMovement',
             'totalRouteUnit',

@@ -30,7 +30,7 @@ class FinanceImportService
     private array $metricColumns = ['rkap', 'release_budget', 'commitment', 'total_consume', 'available_budget'];
 
     /** @return array{branches:int, items:int} */
-    public function import(string $path): array
+    public function import(string $path, string $fileName = 'SAP_Finance_Export.xlsx'): array
     {
         $rows = $this->readRows($path);
         $branches = $this->extract($rows);
@@ -39,10 +39,10 @@ class FinanceImportService
             throw new \RuntimeException('Tidak ada baris cabang (A0...) yang terbaca. Pastikan file export asli dari SAP.');
         }
 
-        return $this->persist($branches);
+        return $this->persist($branches, $fileName);
     }
 
-    /** Deteksi format dari ISI file (temp file Livewire tak punya ekstensi). */
+    /** deteksi format dari ISI file (temp file Livewire tak punya ekstensi). */
     private function readRows(string $path): array
     {
         $handle = @fopen($path, 'rb');
@@ -166,11 +166,12 @@ class FinanceImportService
     }
 
     /** Simpan: replace-on-import dalam 1 transaksi. Cabang baru otomatis dibuat. */
-    private function persist(array $branches): array
+    private function persist(array $branches, string $fileName): array
     {
-        return DB::transaction(function () use ($branches) {
+        return DB::transaction(function () use ($branches, $fileName) {
             FinanceItem::query()->delete();
             FinanceBranch::query()->delete();
+            \App\Models\FinanceUpload::query()->delete();
 
             $itemCount = 0;
             foreach ($branches as $b) {
@@ -196,6 +197,12 @@ class FinanceImportService
                     $itemCount++;
                 }
             }
+
+            \App\Models\FinanceUpload::create([
+                'file_name' => $fileName,
+                'uploaded_by' => auth()->user()->name ?? 'System',
+                'total_rows' => $itemCount,
+            ]);
 
             return ['branches' => count($branches), 'items' => $itemCount];
         });

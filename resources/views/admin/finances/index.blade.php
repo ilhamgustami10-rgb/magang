@@ -22,7 +22,7 @@ class extends Component {
 
         try {
             $service = app(FinanceImportService::class);
-            $service->import($this->fileImport->getRealPath());
+            $service->import($this->fileImport->getRealPath(), $this->fileImport->getClientOriginalName());
 
             $this->reset('fileImport');
             $count = FinanceItem::count();
@@ -37,6 +37,7 @@ class extends Component {
     {
         FinanceItem::query()->delete();
         FinanceBranch::query()->delete();
+        \App\Models\FinanceUpload::query()->delete();
         session()->flash('message', 'Semua data Finance berhasil dihapus.');
     }
 
@@ -54,7 +55,9 @@ class extends Component {
             ->latest()
             ->paginate(15);
             
-        return ['items' => $items];
+        $activeFinanceFiles = \App\Models\FinanceUpload::latest()->pluck('file_name')->toArray();
+            
+        return ['items' => $items, 'activeFinanceFiles' => $activeFinanceFiles];
     }
 };
 ?>
@@ -64,6 +67,15 @@ class extends Component {
         <h1 class="text-3xl font-black text-slate-800 tracking-tight">Master Data Finance</h1>
         <p class="mt-1 text-sm text-slate-500">Impor data realisasi SAP (CSV/Excel) untuk memperbarui visualisasi pada dashboard Finance.</p>
     </div>
+
+    @if(!empty($activeFinanceFiles))
+    <div class="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm font-semibold text-slate-700 flex items-center gap-2">
+        <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <span>File saat ini digunakan: <b>{{ implode(', ', $activeFinanceFiles) }}</b></span>
+    </div>
+    @endif
 
     @if(session('message')) <div class="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">{{ session('message') }}</div> @endif
     @if(session('error')) <div class="rounded-xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">{{ session('error') }}</div> @endif

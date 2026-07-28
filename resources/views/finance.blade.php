@@ -2,7 +2,7 @@
 @php
 // Pastikan $financeData dari controller sesuai spesifikasi
 $financeData = $financeData ?? [];
-$firstTab = !empty($financeData) ? array_key_first($financeData) : '';
+$firstTab = 'Summary'; // Summary jadi tab default
 
 if (!function_exists('fmtCard')) {
     function fmtCard($v) {
@@ -17,9 +17,123 @@ if (!function_exists('fmtShort')) {
         return $v;
     }
 }
+
+// ===== Hitung agregat Summary (semua cabang) =====
+$sumRkap     = 0;
+$sumRelease  = 0;
+$sumCommit   = 0;
+$sumConsume  = 0;
+$sumAvail    = 0;
+$allItems    = []; // kumpulan semua item lintas cabang
+
+foreach ($financeData as $b) {
+    $sumRkap    += $b['rkap']       ?? 0;
+    $sumRelease += $b['release']    ?? 0;
+    $sumCommit  += $b['commitment'] ?? 0;
+    $sumConsume += $b['consume']    ?? 0;
+    $sumAvail   += $b['available']  ?? 0;
+    foreach ($b['items'] ?? [] as $itm) {
+        $allItems[] = $itm;
+    }
+}
+
+$sumSRPct   = $sumRkap    > 0 ? ($sumRelease / $sumRkap    * 100) : 0;
+$sumSCPct   = $sumRelease > 0 ? ($sumConsume  / $sumRelease * 100) : 0;
+$sumSComPct = $sumRelease > 0 ? ($sumCommit   / $sumRelease * 100) : 0;
+$sumSAPct   = $sumRelease > 0 ? ($sumAvail    / $sumRelease * 100) : 0;
+
+// ===== Helper & Grouping Logic untuk Funds Center (Summary) =====
+if (!function_exists('categorizeFundsCenter')) {
+    /**
+     * Mengkategorikan item SAP ke 4 kategori: Pemeliharaan | Perlengkapan | Utilitas | Umum.
+     * 
+     * ATURAN KATEGORISASI:
+     * 1. PRIORITAS 1: Berdasarkan Kode Akun (6 digit pertama)
+     *    - 510202 -> Pemeliharaan (Termasuk Kalibrasi 5102029000)
+     *    - 510203 -> Perlengkapan
+     *    - 510204 -> Utilitas
+     *    - Selain itu -> Umum (misal 510205, 510206, dll)
+     * 2. PRIORITAS 2: Fallback berdasarkan Nama (jika kode tidak ada/tidak valid)
+     *    - Normalisasi nama: lowercase, hapus prefix H-Beban/U-Beban, bersihkan spasi.
+     *    - Urutan pencocokan (first match wins):
+     *      a. Perlengkapan: mengandung 'perlengkapan', 'plkpn', 'plgkpn', 'plengkapan' (misal: ATK & Cetakan Umum)
+     *      b. Pemeliharaan: mengandung 'pemeliharaan', 'pmlh', 'pemel', 'kalibrasi'
+     *      c. Utilitas: mengandung 'utilitas', 'pemakaian'
+     *      d. Umum: fallback terakhir (jangan deteksi hanya karena ada kata 'umum')
+     */
+    function categorizeFundsCenter($kode, $nama): string
+    {
+        $cleanKode = trim((string)$kode);
+        
+        // Cek PRIORITAS 1: Kode Akun (paling akurat)
+        if (preg_match('/^\d{6}/', $cleanKode, $matches)) {
+            $prefix = $matches[0];
+            if ($prefix === '510202') {
+                return 'Pemeliharaan';
+            } elseif ($prefix === '510203') {
+                return 'Perlengkapan';
+            } elseif ($prefix === '510204') {
+                return 'Utilitas';
+            } else {
+                return 'Umum';
+            }
+        }
+
+        // Cek PRIORITAS 2: Fallback Nama (case-insensitive & clean space)
+        $cleanNama = strtolower(trim((string)$nama));
+        $cleanNama = preg_replace('/^[hu]-beban\s+/i', '', $cleanNama);
+        $cleanNama = preg_replace('/\s+/', ' ', $cleanNama);
+
+        // 1. Cek Perlengkapan Dulu (misal: "Perlengkapan Kep. A.T.K. dan Cetakan Umum" tidak masuk Umum)
+        if (str_contains($cleanNama, 'perlengkapan') || 
+            str_contains($cleanNama, 'plkpn') || 
+            str_contains($cleanNama, 'plgkpn') || 
+            str_contains($cleanNama, 'plengkapan')) {
+            return 'Perlengkapan';
+        }
+
+        // 2. Cek Pemeliharaan (Kalibrasi masuk sini jika kode tidak ada)
+        if (str_contains($cleanNama, 'pemeliharaan') || 
+            str_contains($cleanNama, 'pmlh') || 
+            str_contains($cleanNama, 'pemel') || 
+            str_contains($cleanNama, 'kalibrasi')) {
+            return 'Pemeliharaan';
+        }
+
+        // 3. Cek Utilitas
+        if (str_contains($cleanNama, 'utilitas') || 
+            str_contains($cleanNama, 'pemakaian')) {
+            return 'Utilitas';
+        }
+
+        // 4. Default Fallback
+        return 'Umum';
+    }
+}
+
+// Urutan tampil group yang tetap: Umum, Pemeliharaan, Utilitas, Perlengkapan
+$groupedItems = [
+    'Umum'         => [],
+    'Pemeliharaan' => [],
+    'Utilitas'     => [],
+    'Perlengkapan' => [],
+];
+
+$groupColors = [
+    'Umum'         => 'blue',
+    'Pemeliharaan' => 'amber',
+    'Utilitas'     => 'emerald',
+    'Perlengkapan' => 'violet',
+];
+
+foreach ($allItems as $itm) {
+    $cat = categorizeFundsCenter($itm['code'] ?? '', $itm['name'] ?? '');
+    $groupedItems[$cat][] = $itm;
+}
 @endphp
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
 <script>
@@ -29,7 +143,7 @@ Chart.defaults.font.size = 13;
 Chart.defaults.color = '#475569';
 Chart.defaults.font.family = 'Segoe UI, system-ui, sans-serif';
 
-// Custom plugin to draw text in the middle of donut
+// Custom plugin: center text donut
 const donutCenterTextPlugin = {
     id: 'donutCenterText',
     afterDraw: (chart) => {
@@ -37,13 +151,10 @@ const donutCenterTextPlugin = {
         if (!chart.config.options.plugins.donutCenterText) return;
         const opts = chart.config.options.plugins.donutCenterText;
         if (!opts.text) return;
-        
         const ctx = chart.ctx;
         const width = chart.width;
         const height = chart.height;
         ctx.restore();
-        
-        // Draw percentage
         ctx.font = "900 36px 'Segoe UI', system-ui";
         ctx.textBaseline = "middle";
         ctx.textAlign = "center";
@@ -51,8 +162,6 @@ const donutCenterTextPlugin = {
         let textX = width / 2;
         let textY = height / 2 - 10;
         ctx.fillText(opts.text, textX, textY);
-        
-        // Draw label
         ctx.font = "600 14px 'Segoe UI', system-ui";
         ctx.fillStyle = '#64748b';
         ctx.fillText(opts.label, textX, textY + 28);
@@ -68,8 +177,8 @@ document.addEventListener('alpine:init', () => {
 @endphp
     Alpine.data('fin_{{ $bid }}', () => ({
         rawData: {!! json_encode($branch['items'] ?? []) !!},
-        selRC: null, // index for Release vs Consume
-        selCA: null, // index for Consume vs Available
+        selRC: null,
+        selCA: null,
         openRC: false,
         openCA: false,
         chartRC: null,
@@ -85,13 +194,11 @@ document.addEventListener('alpine:init', () => {
                 this.selRC = 0;
                 this.selCA = 0;
             }
-            // watch tab visibility
             this.$watch('activeTab', tab => {
                 if(tab === '{{ $branchName }}') {
                     this.$nextTick(() => { this.renderAllCharts(); });
                 }
             });
-            // Initial render if active tab
             if(this.activeTab === '{{ $branchName }}') {
                 this.$nextTick(() => { this.renderAllCharts(); });
             }
@@ -125,7 +232,6 @@ document.addEventListener('alpine:init', () => {
             this.destroyChart('chartRC');
             const item = this.rawData[this.selRC];
             const p = this.pct(item.consume, item.release);
-            
             const ctx = document.getElementById('rc_{{ $bid }}');
             if(!ctx) return;
             this.chartRC = new Chart(ctx, {
@@ -156,7 +262,6 @@ document.addEventListener('alpine:init', () => {
             this.destroyChart('chartCA');
             const item = this.rawData[this.selCA];
             const p = this.pct(item.available, item.release);
-            
             const ctx = document.getElementById('ca_{{ $bid }}');
             if(!ctx) return;
             this.chartCA = new Chart(ctx, {
@@ -187,16 +292,11 @@ document.addEventListener('alpine:init', () => {
             const ctx = document.getElementById('bar_c_{{ $bid }}');
             if(!ctx) return;
             const top = [...this.rawData].sort((a,b)=>b.consume - a.consume);
-            
             this.chartBarTopC = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: top.map(x=>x.name),
-                    datasets: [{
-                        data: top.map(x=>x.consume),
-                        backgroundColor: '#f97316',
-                        borderRadius: 4
-                    }]
+                    datasets: [{ data: top.map(x=>x.consume), backgroundColor: '#f97316', borderRadius: 4 }]
                 },
                 options: {
                     indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -214,16 +314,11 @@ document.addEventListener('alpine:init', () => {
             const ctx = document.getElementById('bar_a_{{ $bid }}');
             if(!ctx) return;
             const top = [...this.rawData].sort((a,b)=>b.available - a.available);
-            
             this.chartBarTopA = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: top.map(x=>x.name),
-                    datasets: [{
-                        data: top.map(x=>x.available),
-                        backgroundColor: '#16a34a',
-                        borderRadius: 4
-                    }]
+                    datasets: [{ data: top.map(x=>x.available), backgroundColor: '#16a34a', borderRadius: 4 }]
                 },
                 options: {
                     indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -267,13 +362,82 @@ document.addEventListener('alpine:init', () => {
     }));
 @endforeach
 });
+
+// ===== Summary donut charts (rendered after DOM ready) =====
+document.addEventListener('DOMContentLoaded', () => {
+    // Summary RC donut
+    const sumRCCtx = document.getElementById('sum_rc');
+    if (sumRCCtx) {
+        const release = {{ $sumRelease }};
+        const consume = {{ $sumConsume }};
+        const pct = release > 0 ? (consume/release*100) : 0;
+        new Chart(sumRCCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Release Budget', 'Total Consume'],
+                datasets: [{ data: [release, consume], backgroundColor: ['#1e40af','#93c5fd'], borderWidth: 3, borderColor: '#fff' }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '62%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
+                    tooltip: { callbacks: { label: c => 'Rp ' + Math.round(c.raw).toLocaleString('id-ID') } },
+                    donutCenterText: { text: pct.toFixed(1)+'%', label: 'Serapan' }
+                }
+            }
+        });
+    }
+
+    // Summary CA donut
+    const sumCACtx = document.getElementById('sum_ca');
+    if (sumCACtx) {
+        const release = {{ $sumRelease }};
+        const consume = {{ $sumConsume }};
+        const avail   = {{ $sumAvail }};
+        const pct = release > 0 ? (avail/release*100) : 0;
+        new Chart(sumCACtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Total Consume', 'Available Budget'],
+                datasets: [{ data: [consume, avail], backgroundColor: ['#1e40af','#93c5fd'], borderWidth: 3, borderColor: '#fff' }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '62%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
+                    tooltip: { callbacks: { label: c => 'Rp ' + Math.round(c.raw).toLocaleString('id-ID') } },
+                    donutCenterText: { text: pct.toFixed(1)+'%', label: 'Tersisa' }
+                }
+            }
+        });
+    }
+});
 </script>
 
 <div class="w-full" x-data="{ activeTab: '{{ $firstTab }}' }">
 
-    <!-- Tab Navigasi Cabang -->
+    {{-- ================================================== --}}
+    {{-- JUDUL "BUDGET USAGE MONITORING" — identik dgn Traffic --}}
+    {{-- ================================================== --}}
+    <div class="px-4 sm:px-6 lg:px-8 mb-6 pt-2">
+        <h2 class="flex items-center gap-4 text-[42px] font-black text-slate-800 tracking-tight">
+            <span>Budget Usage Monitoring</span>
+        </h2>
+        <div class="mt-3 h-1.5 w-20 bg-gradient-to-r from-orange-500 to-yellow-300 rounded-full"></div>
+    </div>
+
+    {{-- ================================================== --}}
+    {{-- TAB NAVIGASI CABANG + SUMMARY --}}
+    {{-- ================================================== --}}
     <div class="px-4 sm:px-6 lg:px-8 mb-6">
         <div class="flex gap-2 overflow-x-auto pb-2" style="scrollbar-width: none;">
+            {{-- Tab Summary (pertama) --}}
+            <button @click="activeTab = 'Summary'"
+                :class="activeTab === 'Summary' ? 'bg-blue-600 text-white shadow-lg border-blue-600 scale-105' : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-200'"
+                class="px-5 py-2 rounded-full font-bold text-sm transition-all whitespace-nowrap border">
+                Summary
+            </button>
+            {{-- Tab per cabang --}}
             @foreach($financeData as $branchName => $branch)
             <button @click="activeTab = '{{ $branchName }}'"
                 :class="activeTab === '{{ $branchName }}' ? 'bg-blue-600 text-white shadow-lg border-blue-600 scale-105' : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-200'"
@@ -286,7 +450,197 @@ document.addEventListener('alpine:init', () => {
 
     <div class="px-4 sm:px-6 lg:px-8 w-full">
 
+    {{-- ================================================== --}}
+    {{-- TAB SUMMARY --}}
+    {{-- ================================================== --}}
+    <div x-show="activeTab === 'Summary'" style="display:none;" class="space-y-6">
 
+        {{-- Header Summary dengan badge tanggal update --}}
+        <div class="flex items-center gap-3 flex-wrap">
+            @if($financeUpdatedAt)
+            <div class="inline-flex items-center gap-2">
+                <span class="inline-flex items-center bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">Updated</span>
+                <span class="inline-flex items-center bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">{{ $financeUpdatedAt }}</span>
+            </div>
+            @endif
+            <span class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-500 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                {{ count($financeData) }} Cabang
+            </span>
+        </div>
+
+        {{-- KPI Cards — baris 1 (RKAP, Release, Consume) --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-white rounded-[18px] p-6 border-l-[6px] border-l-[#0f172a] shadow-sm flex flex-col justify-between">
+                <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">RKAP</p>
+                <p class="text-3xl font-black text-slate-800 mt-3">{{ fmtCard($sumRkap) }}</p>
+            </div>
+            <div class="bg-white rounded-[18px] p-6 border-l-[6px] border-l-[#2563eb] shadow-sm flex flex-col justify-between">
+                <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">Release Budget</p>
+                <p class="text-3xl font-black text-slate-800 mt-3">{{ fmtCard($sumRelease) }}</p>
+                <p class="text-sm font-semibold text-blue-600 mt-2">{{ number_format($sumSRPct,1,',','.') }}% dari RKAP</p>
+            </div>
+            <div class="bg-white rounded-[18px] p-6 border-l-[6px] border-l-[#f97316] shadow-sm flex flex-col justify-between">
+                <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">Total Consume</p>
+                <p class="text-3xl font-black text-slate-800 mt-3">{{ fmtCard($sumConsume) }}</p>
+                <p class="text-sm font-semibold text-orange-500 mt-2">{{ number_format($sumSCPct,1,',','.') }}% serapan</p>
+            </div>
+        </div>
+        {{-- KPI Cards — baris 2 (Commitment, Available) --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-[18px] p-6 border-l-[6px] border-l-[#7c3aed] shadow-sm flex flex-col justify-between">
+                <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">Commitment</p>
+                <p class="text-3xl font-black text-slate-800 mt-3">{{ fmtCard($sumCommit) }}</p>
+                <p class="text-sm font-semibold text-violet-500 mt-2">{{ number_format($sumSComPct,1,',','.') }}% dari Release</p>
+            </div>
+            <div class="bg-white rounded-[18px] p-6 border-l-[6px] border-l-[#16a34a] shadow-sm flex flex-col justify-between">
+                <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">Available Budget</p>
+                <p class="text-3xl font-black text-slate-800 mt-3">{{ fmtCard($sumAvail) }}</p>
+                <p class="text-sm font-semibold text-emerald-600 mt-2">{{ number_format($sumSAPct,1,',','.') }}% dari Release</p>
+            </div>
+        </div>
+
+        {{-- Serapan Progress Bar --}}
+        <div class="bg-white rounded-[18px] p-6 shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-6">
+            <div class="flex-shrink-0 text-center md:text-left">
+                <p class="text-4xl font-black text-blue-600">{{ number_format($sumSCPct,1,',','.') }}%</p>
+                <p class="text-xs font-bold text-slate-400 uppercase mt-1">Serapan Anggaran</p>
+            </div>
+            <div class="flex-1 w-full">
+                <div class="w-full bg-slate-100 h-4 rounded-full overflow-hidden">
+                    <div class="h-full bg-blue-600 transition-all duration-500" style="width: {{ min(100, $sumSCPct) }}%"></div>
+                </div>
+                <p class="text-right text-sm font-bold text-slate-600 mt-2">{{ fmtCard($sumConsume) }} dari {{ fmtCard($sumRelease) }}</p>
+            </div>
+        </div>
+
+        {{-- Donut Charts --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-[18px] p-6 shadow-sm border border-slate-100 flex flex-col">
+                <h2 class="text-lg font-black text-slate-800 mb-4">Release vs Total Consume</h2>
+                <div class="h-[380px] w-full flex-1"><canvas id="sum_rc"></canvas></div>
+            </div>
+            <div class="bg-white rounded-[18px] p-6 shadow-sm border border-slate-100 flex flex-col">
+                <h2 class="text-lg font-black text-slate-800 mb-4">Consume vs Available Budget</h2>
+                <div class="h-[380px] w-full flex-1"><canvas id="sum_ca"></canvas></div>
+            </div>
+        </div>
+
+        {{-- Detail Funds Center GROUPED (hanya di Summary) --}}
+        <div class="bg-white rounded-[18px] p-6 shadow-sm border border-slate-100">
+            <h2 class="text-xl font-black text-slate-800 mb-6">Detail Funds Center – Semua Cabang</h2>
+
+            @php
+            $groupIconColors = [
+                'Umum'         => ['bg' => 'bg-blue-600',   'text' => 'text-blue-700',   'badge' => 'bg-blue-50 text-blue-700 border-blue-100'],
+                'Pemeliharaan' => ['bg' => 'bg-amber-500',  'text' => 'text-amber-700',  'badge' => 'bg-amber-50 text-amber-700 border-amber-100'],
+                'Utilitas'     => ['bg' => 'bg-emerald-600','text' => 'text-emerald-700','badge' => 'bg-emerald-50 text-emerald-700 border-emerald-100'],
+                'Perlengkapan' => ['bg' => 'bg-violet-600', 'text' => 'text-violet-700', 'badge' => 'bg-violet-50 text-violet-700 border-violet-100'],
+            ];
+            @endphp
+
+            <div class="space-y-4">
+            @foreach($groupedItems as $catName => $catItems)
+            @if(count($catItems) === 0) @continue @endif
+            @php
+                $catRkap    = array_sum(array_column($catItems, 'rkap'));
+                $catRelease = array_sum(array_column($catItems, 'release'));
+                $catConsume = array_sum(array_column($catItems, 'consume'));
+                $catAvail   = array_sum(array_column($catItems, 'available'));
+                $catCommit  = array_sum(array_column($catItems, 'commitment'));
+                $catPct     = $catRelease > 0 ? ($catConsume / $catRelease * 100) : 0;
+                $c          = $groupIconColors[$catName];
+            @endphp
+
+            {{-- Group Card with Accordion Toggle --}}
+            <div x-data="{ isOpen: false }" class="border border-slate-100 rounded-2xl bg-slate-50/10 p-5 shadow-sm transition-all duration-300">
+                {{-- Group Header (Clickable) --}}
+                <div @click="isOpen = !isOpen" class="flex items-center gap-3 cursor-pointer select-none group">
+                    <div class="w-2.5 h-2.5 rounded-full {{ $c['bg'] }}"></div>
+                    <h3 class="text-base font-black text-slate-700 uppercase tracking-wide group-hover:text-blue-600 transition-colors">{{ $catName }}</h3>
+                    <span class="text-xs font-bold px-2.5 py-1 rounded-full border {{ $c['badge'] }}">{{ count($catItems) }} item</span>
+                    <span class="ml-auto text-sm font-bold text-slate-500 mr-2">Serapan: <span class="{{ $c['text'] }} font-black">{{ number_format($catPct,1,',','.') }}%</span></span>
+                    
+                    {{-- Chevron Indicator --}}
+                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300 group-hover:text-slate-600" :class="isOpen ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+
+                {{-- Mini progress bar --}}
+                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-3 mb-2">
+                    <div class="h-full {{ $c['bg'] }} rounded-full transition-all duration-500" style="width: {{ min(100,$catPct) }}%"></div>
+                </div>
+
+                {{-- Collapsible Table Content --}}
+                <div x-show="isOpen" x-collapse style="display: none;" class="mt-4 pt-4 border-t border-slate-100">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm whitespace-nowrap min-w-[800px]">
+                            <thead>
+                                <tr class="text-xs font-bold text-slate-400 uppercase border-b border-slate-200">
+                                    <th class="py-2 px-4">Funds Center</th>
+                                    <th class="py-2 px-4 text-right">RKAP</th>
+                                    <th class="py-2 px-4 text-right">Release</th>
+                                    <th class="py-2 px-4 text-right">Consume</th>
+                                    <th class="py-2 px-4 text-right">Available</th>
+                                    <th class="py-2 px-4 text-right">Commit</th>
+                                    <th class="py-2 px-4 w-40">Serapan</th>
+                                    <th class="py-2 px-4 text-right">%</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @foreach($catItems as $itm)
+                                @php
+                                    $iPct = ($itm['release'] ?? 0) > 0 ? (($itm['consume'] ?? 0) / $itm['release'] * 100) : 0;
+                                    $barClass = $iPct >= 90 ? 'bg-red-500' : ($iPct >= 60 ? 'bg-emerald-500' : ($iPct >= 30 ? 'bg-blue-500' : 'bg-slate-300'));
+                                @endphp
+                                <tr class="hover:bg-slate-50/80 transition-colors">
+                                    <td class="py-3 px-4">
+                                        <p class="font-bold text-slate-700">{{ $itm['name'] }}</p>
+                                        <p class="text-xs text-slate-400">{{ $itm['code'] }}</p>
+                                    </td>
+                                    <td class="py-3 px-4 text-right font-medium text-slate-600">{{ fmtCard($itm['rkap'] ?? 0) }}</td>
+                                    <td class="py-3 px-4 text-right font-medium text-slate-600">{{ fmtCard($itm['release'] ?? 0) }}</td>
+                                    <td class="py-3 px-4 text-right font-medium text-slate-600">{{ fmtCard($itm['consume'] ?? 0) }}</td>
+                                    <td class="py-3 px-4 text-right font-medium text-slate-600">{{ fmtCard($itm['available'] ?? 0) }}</td>
+                                    <td class="py-3 px-4 text-right font-medium text-slate-600">{{ fmtCard($itm['commitment'] ?? 0) }}</td>
+                                    <td class="py-3 px-4">
+                                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                            <div class="h-full {{ $barClass }} transition-all duration-300" style="width:{{ min(100,$iPct) }}%"></div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 text-right font-bold text-slate-700">{{ number_format($iPct,1,',','.') }}%</td>
+                                </tr>
+                                @endforeach
+                                {{-- Subtotal row --}}
+                                <tr class="bg-slate-50 font-black text-slate-700 border-t-2 border-slate-200">
+                                    <td class="py-2 px-4 text-xs uppercase tracking-widest text-slate-500">Subtotal {{ $catName }}</td>
+                                    <td class="py-2 px-4 text-right text-xs">{{ fmtCard($catRkap) }}</td>
+                                    <td class="py-2 px-4 text-right text-xs">{{ fmtCard($catRelease) }}</td>
+                                    <td class="py-2 px-4 text-right text-xs">{{ fmtCard($catConsume) }}</td>
+                                    <td class="py-2 px-4 text-right text-xs">{{ fmtCard($catAvail) }}</td>
+                                    <td class="py-2 px-4 text-right text-xs">{{ fmtCard($catCommit) }}</td>
+                                    <td class="py-2 px-4">
+                                        <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                                            <div class="h-full {{ $c['bg'] }} rounded-full" style="width: {{ min(100,$catPct) }}%"></div>
+                                        </div>
+                                    </td>
+                                    <td class="py-2 px-4 text-right text-xs {{ $c['text'] }}">{{ number_format($catPct,1,',','.') }}%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            @endforeach
+            </div>
+        </div>
+
+    </div>{{-- end Summary --}}
+
+    {{-- ================================================== --}}
+    {{-- TAB PER CABANG (tidak berubah) --}}
+    {{-- ================================================== --}}
     @foreach($financeData as $branchName => $branch)
     @php
         $bid = str_replace([' ','-'], '_', Str::slug($branchName));
@@ -409,7 +763,7 @@ document.addEventListener('alpine:init', () => {
             </div>
         </div>
 
-        <!-- Detail Table -->
+        <!-- Detail Table (TIDAK digroup, biarkan apa adanya) -->
         <div class="bg-white rounded-[18px] p-6 shadow-sm border border-slate-100">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h2 class="text-lg font-black text-slate-800">Detail Funds Center</h2>
@@ -479,5 +833,6 @@ document.addEventListener('alpine:init', () => {
     </div>
     @endforeach
     
+</div>
 </div>
 </x-app-layout>

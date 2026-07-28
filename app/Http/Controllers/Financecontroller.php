@@ -48,7 +48,11 @@ class FinanceController extends Controller
             }
         }
 
-        return view('finance', compact('financeData'));
+        $activeFinanceFiles = \App\Models\FinanceUpload::latest()->pluck('file_name')->toArray();
+        $lastUpload = \App\Models\FinanceUpload::latest()->first();
+        $financeUpdatedAt = $lastUpload ? $lastUpload->created_at->format('d M Y') : null;
+
+        return view('finance', compact('financeData', 'activeFinanceFiles', 'financeUpdatedAt'));
     }
 
     public function import(Request $request, FinanceImportService $importService)
@@ -58,7 +62,7 @@ class FinanceController extends Controller
         ]);
 
         try {
-            $importService->import($request->file('file')->getRealPath());
+            $importService->import($request->file('file')->getRealPath(), $request->file('file')->getClientOriginalName());
             
             $count = \App\Models\FinanceBranch::count() + \App\Models\FinanceItem::count();
             return redirect()->back()->with('success', "{$count} baris Finance berhasil diimpor dan langsung tampil di tab Finance.");
