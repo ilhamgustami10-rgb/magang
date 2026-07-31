@@ -497,12 +497,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="mt-3 h-1.5 w-20 bg-gradient-to-r from-orange-500 to-yellow-300 rounded-full"></div>
             </div>
             
-            <div class="flex items-center gap-2" x-data="{ refreshing: false, refreshingFolder: false, testingKoneksi: false }">
-                {{-- Tombol utama: Refresh Data SAP (jalankan bot + impor) --}}
+            <div class="flex items-center gap-3" x-data="{ refreshing: false, testingKoneksi: false }">
+                {{-- Tombol Diagnosa: Test Koneksi SAP (Secondary/Outline) --}}
+                <form action="{{ route('finance.testKoneksi') }}" method="POST" @submit="testingKoneksi = true">
+                    @csrf
+                    <button type="submit"
+                        :disabled="refreshing || testingKoneksi"
+                        :class="testingKoneksi ? 'border-slate-300 text-slate-400 cursor-wait' : 'border-indigo-600 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700'"
+                        class="font-bold py-2.5 px-5 rounded-full border-2 transition-all whitespace-nowrap flex items-center gap-2 text-sm disabled:opacity-70 bg-transparent">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="testingKoneksi ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span x-show="!testingKoneksi">Test Koneksi SAP</span>
+                        <span x-show="testingKoneksi" x-cloak>Mengecek koneksi...</span>
+                    </button>
+                </form>
+
+                {{-- Tombol utama: Refresh Data SAP (Primary) --}}
                 <form action="{{ route('finance.refresh') }}" method="POST" @submit="refreshing = true">
                     @csrf
                     <button type="submit"
-                        :disabled="refreshing || refreshingFolder || testingKoneksi"
+                        :disabled="refreshing || testingKoneksi"
                         :class="refreshing ? 'bg-indigo-400 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-700'"
                         class="text-white font-bold py-2.5 px-6 rounded-full shadow-md transition-all whitespace-nowrap flex items-center gap-2 disabled:opacity-70">
                         {{-- Icon: spinning saat loading, normal saat idle --}}
@@ -510,37 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         <span x-show="!refreshing">Refresh Data SAP</span>
-                        <span x-show="refreshing" x-cloak>Menarik data dari SAP... (jangan sentuh mouse/keyboard)</span>
-                    </button>
-                </form>
-                
-                {{-- Tombol Diagnosa: Test Koneksi SAP --}}
-                <form action="{{ route('finance.testKoneksi') }}" method="POST" @submit="testingKoneksi = true">
-                    @csrf
-                    <button type="submit"
-                        :disabled="refreshing || refreshingFolder || testingKoneksi"
-                        :class="testingKoneksi ? 'bg-emerald-300 cursor-wait' : 'bg-emerald-500 hover:bg-emerald-600'"
-                        class="text-white font-bold py-2.5 px-4 rounded-full shadow-md transition-all whitespace-nowrap flex items-center gap-2 disabled:opacity-70 text-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="testingKoneksi ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        <span x-show="!testingKoneksi">Test Koneksi SAP</span>
-                        <span x-show="testingKoneksi" x-cloak>Menguji Koneksi...</span>
-                    </button>
-                </form>
-
-                {{-- Tombol cadangan: Impor dari folder saja (tanpa bot) --}}
-                <form action="{{ route('finance.refreshFromFolder') }}" method="POST" @submit="refreshingFolder = true">
-                    @csrf
-                    <button type="submit"
-                        :disabled="refreshing || refreshingFolder || testingKoneksi"
-                        :class="refreshingFolder ? 'bg-slate-400 cursor-wait' : 'bg-slate-100 hover:bg-slate-200'"
-                        class="text-slate-700 font-bold py-2.5 px-4 rounded-full border border-slate-300 transition-all whitespace-nowrap flex items-center gap-2 text-sm disabled:opacity-70">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        <span x-show="!refreshingFolder">Impor dari folder</span>
-                        <span x-show="refreshingFolder" x-cloak>Memproses file...</span>
+                        <span x-show="refreshing" x-cloak>Menarik data dari SAP...</span>
                     </button>
                 </form>
             </div>
@@ -592,13 +577,18 @@ document.addEventListener('DOMContentLoaded', () => {
             @if($financeUpdatedAt)
             <div class="inline-flex items-center gap-2">
                 <span class="inline-flex items-center bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">Updated</span>
-                <span class="inline-flex items-center bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">{{ $financeUpdatedAt }}</span>
+                <span class="inline-flex items-center bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">
+                    {{ $financeUpdatedAt }} &nbsp;&nbsp;{{ optional(\App\Models\ImportLog::latest()->first())?->created_at?->timezone('Asia/Jakarta')?->format('H:i') ?? now('Asia/Jakarta')->format('H:i') }} WIB &nbsp;&nbsp;&bull;&nbsp;&nbsp; {{ count($financeData) }} CABANG
+                </span>
+            </div>
+            @else
+            <div class="inline-flex items-center gap-2">
+                <span class="inline-flex items-center bg-slate-50 border border-slate-200 text-slate-500 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse mr-1.5"></span>
+                    {{ count($financeData) }} Cabang
+                </span>
             </div>
             @endif
-            <span class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-500 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">
-                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                {{ count($financeData) }} Cabang
-            </span>
         </div>
 
         {{-- KPI Cards — baris 1 (RKAP, Release, Consume) --}}

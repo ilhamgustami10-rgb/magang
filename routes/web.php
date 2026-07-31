@@ -21,7 +21,6 @@ Route::get('/', [DashboardController::class, 'index'])->name('traffic');
 Route::get('/finance', [FinanceController::class, 'index'])->name('finance');
 Route::post('/finance/import', [FinanceController::class, 'import'])->name('finance.import');
 Route::post('/finance/refresh', [FinanceController::class, 'refresh'])->name('finance.refresh');
-Route::post('/finance/refresh-folder', [FinanceController::class, 'refreshFromFolder'])->name('finance.refreshFromFolder');
 Route::post('/finance/test-koneksi', [FinanceController::class, 'testKoneksi'])->name('finance.testKoneksi');
 
 use App\Http\Controllers\SapDashboardController;

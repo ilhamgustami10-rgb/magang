@@ -241,12 +241,11 @@ class FinanceController extends Controller
             Log::info("SAP Refresh: File ditemukan — {$fileName} ({$newFile->getSize()} bytes)");
 
             // ── 6. Jalankan proses IMPORT ────────────────────────────
-            // report_date = tanggal ekspor (hari ini).
-            // Upsert memakai kunci unik (report_date, branch_code, item_code, level)
-            // sehingga refresh berkali-kali pada HARI yang sama akan MENIMPA baris hari itu
-            // (tidak menggandakan), dan hari berbeda menyimpan snapshot baru.
-            // Jika ingin perilaku "selalu ganti total" (tanpa snapshot harian),
-            // ubah $reportDate menjadi tanggal tetap atau hapus report_date dari kunci unik.
+            $importSuccess = false;
+            $count = 0;
+            $totalCabang = 0;
+            $errorMessage = '';
+
             try {
                 $stats = $importService->import($filePath, $fileName, 'sap_bot');
 
@@ -255,22 +254,29 @@ class FinanceController extends Controller
                     ->where('report_date', $reportDate)
                     ->count();
 
-                // Pindahkan file ke archive
-                File::move($filePath, $archivePath . '/' . $fileName);
-
                 $count = $stats['rows_imported'];
+                $importSuccess = true;
 
                 Log::info("SAP Refresh: Berhasil — {$count} baris, {$totalCabang} cabang", $stats);
-
-                return redirect()->back()->with('success',
-                    "Berhasil tarik data dari SAP: {$count} baris, {$totalCabang} cabang diimpor (report_date: {$reportDate})."
-                );
             } catch (\Exception $e) {
-                Log::error("SAP Refresh: Parse/import gagal untuk {$fileName}: " . $e->getMessage());
-                // Pindahkan ke failed
-                File::move($filePath, $failedPath . '/' . $fileName);
+                $errorMessage = $e->getMessage();
+                Log::error("SAP Refresh: Parse/import gagal untuk {$fileName}: " . $errorMessage);
+            }
+
+            // Pindahkan file di LUAR try-catch agar kegagalan move tidak menggagalkan status success import
+            if ($importSuccess) {
+                if (!$this->safeMoveFile($filePath, $archivePath . '/' . $fileName)) {
+                    Log::warning("SAP Refresh: Data berhasil diimpor, tapi gagal memindah file ke archive. (Mungkin terkunci Excel)");
+                }
+                return redirect()->back()->with('success',
+                    "Berhasil tarik data dari SAP: {$count} baris, {$totalCabang} cabang diimpor."
+                );
+            } else {
+                if (!$this->safeMoveFile($filePath, $failedPath . '/' . $fileName)) {
+                    Log::warning("SAP Refresh: Data gagal diimpor dan gagal memindah file ke failed. (Mungkin terkunci Excel)");
+                }
                 return redirect()->back()->with('error',
-                    "File diterima dari SAP tapi gagal diproses: " . $e->getMessage()
+                    "File diterima dari SAP tapi gagal diproses: " . $errorMessage
                 );
             }
 
@@ -287,53 +293,25 @@ class FinanceController extends Controller
         }
     }
 
+
     /**
-     * TOMBOL CADANGAN: Impor dari folder saja (tanpa memanggil bot).
-     * Untuk keadaan darurat ketika file sudah ada di D:/Sap_export
-     * tapi bot tidak bisa dijalankan.
+     * Helper untuk memindahkan file dengan aman meski terkunci oleh proses lain (misal: Excel)
      */
-    public function refreshFromFolder(SapImportService $importService)
+    private function safeMoveFile(string $from, string $to): bool
     {
-        $importPath  = config('sap.import_path');
-        $archivePath = config('sap.archive_path');
-        $failedPath  = config('sap.failed_path');
-
-        File::ensureDirectoryExists($importPath);
-        File::ensureDirectoryExists($archivePath);
-        File::ensureDirectoryExists($failedPath);
-
-        $files = collect(File::files($importPath))
-            ->filter(function ($file) {
-                return in_array(strtolower($file->getExtension()), ['csv', 'txt', 'xlsx', 'xls']);
-            })
-            ->sortByDesc(function ($file) {
-                return $file->getMTime();
-            });
-
-        $latestFile = $files->first();
-
-        if (!$latestFile) {
-            return redirect()->back()->with('error', "Tidak ada file di folder {$importPath}.");
+        $dir = dirname($to);
+        if (!is_dir($dir)) { @mkdir($dir, 0777, true); }
+        for ($i = 0; $i < 5; $i++) {
+            if (@rename($from, $to)) return true;
+            if (@copy($from, $to)) {
+                if (@unlink($from)) return true;
+                \Illuminate\Support\Facades\Log::warning("safeMoveFile: tersalin tapi sumber terkunci (mungkin dibuka Excel): {$from}");
+                return true;
+            }
+            usleep(500000); // tunggu 0.5 detik
         }
-
-        $filePath = $latestFile->getRealPath();
-        $fileName = $latestFile->getFilename();
-
-        try {
-            $stats = $importService->import($filePath, $fileName, 'folder');
-            $count = $stats['rows_imported'];
-            $totalCabang = BudgetRealisasi::where('level', 'cabang')
-                ->where('report_date', BudgetRealisasi::max('report_date'))
-                ->count();
-                
-            File::move($filePath, $archivePath . '/' . $fileName);
-            
-            return redirect()->back()->with('success', "File terbaru ({$fileName}) berhasil diproses. {$count} baris masuk dengan {$totalCabang} cabang terbaru.");
-        } catch (\Exception $e) {
-            Log::error("Manual Refresh Failed for file {$fileName}: " . $e->getMessage());
-            File::move($filePath, $failedPath . '/' . $fileName);
-            return redirect()->back()->with('error', "Gagal memproses file {$fileName}: " . $e->getMessage());
-        }
+        \Illuminate\Support\Facades\Log::warning("safeMoveFile: gagal memindah {$from} -> {$to} (mungkin terkunci proses lain)");
+        return false;
     }
 
     /**

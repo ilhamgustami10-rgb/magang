@@ -94,6 +94,9 @@ class SapImportService
         $spreadsheet = IOFactory::load($filePath);
         $worksheet = $spreadsheet->getActiveSheet();
         $rows = $worksheet->toArray(null, true, false, false); 
+        
+        $spreadsheet->disconnectWorksheets();
+        unset($worksheet, $spreadsheet);
 
         return $this->processData($rows, $reportDate);
     }
