@@ -543,12 +543,12 @@ document.addEventListener('DOMContentLoaded', () => {
         {{-- Serapan Progress Bar --}}
         <div class="bg-white rounded-[18px] p-6 shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-6">
             <div class="flex-shrink-0 text-center md:text-left">
-                <p class="text-4xl font-black text-blue-600">{{ number_format($sumSCPct,1,',','.') }}%</p>
+                <p class="text-4xl font-black {{ $sumSCPct >= 90 ? 'text-[#16a34a]' : ($sumSCPct >= 60 ? 'text-[#2563eb]' : ($sumSCPct >= 30 ? 'text-[#f97316]' : 'text-[#dc2626]')) }}">{{ number_format($sumSCPct,1,',','.') }}%</p>
                 <p class="text-xs font-bold text-slate-400 uppercase mt-1">Serapan Anggaran</p>
             </div>
             <div class="flex-1 w-full">
                 <div class="w-full bg-slate-100 h-4 rounded-full overflow-hidden">
-                    <div class="h-full bg-blue-600 transition-all duration-500" style="width: {{ min(100, $sumSCPct) }}%"></div>
+                    <div class="h-full transition-all duration-500 {{ $sumSCPct >= 90 ? 'bg-[#16a34a]' : ($sumSCPct >= 60 ? 'bg-[#2563eb]' : ($sumSCPct >= 30 ? 'bg-[#f97316]' : 'bg-[#dc2626]')) }}" style="width: {{ min(100, $sumSCPct) }}%"></div>
                 </div>
                 <p class="text-right text-sm font-bold text-slate-600 mt-2">{{ fmtCard($sumConsume) }} dari {{ fmtCard($sumRelease) }}</p>
             </div>
@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.commitment)"></td>
                                         <td class="py-3.5 px-4">
                                             <div class="w-full bg-slate-200/70 h-3 rounded-full overflow-hidden">
-                                                <div class="h-full transition-all duration-300" :class="pct(r.consume,r.release)>=90 ? 'bg-[#dc2626]' : pct(r.consume,r.release)>=60 ? 'bg-[#16a34a]' : pct(r.consume,r.release)>=30 ? 'bg-[#2563eb]' : 'bg-[#94a3b8]'" :style="'width:'+Math.min(100, pct(r.consume,r.release))+'%'"></div>
+                                                <div class="h-full transition-all duration-300" :class="pct(r.consume,r.release)>=90 ? 'bg-[#16a34a]' : pct(r.consume,r.release)>=60 ? 'bg-[#2563eb]' : pct(r.consume,r.release)>=30 ? 'bg-[#f97316]' : 'bg-[#dc2626]'" :style="'width:'+Math.min(100, pct(r.consume,r.release))+'%'"></div>
                                             </div>
                                         </td>
                                         <td class="py-3.5 px-4 text-right text-[15px] font-black text-slate-800" x-text="pct(r.consume,r.release).toFixed(1)+'%'"></td>
@@ -736,12 +736,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Serapan Progress -->
         <div class="bg-white rounded-[18px] p-6 shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-6">
             <div class="flex-shrink-0 text-center md:text-left">
-                <p class="text-4xl font-black text-blue-600">{{ number_format($sCPct,1,',','.') }}%</p>
+                <p class="text-4xl font-black {{ $sCPct >= 90 ? 'text-[#16a34a]' : ($sCPct >= 60 ? 'text-[#2563eb]' : ($sCPct >= 30 ? 'text-[#f97316]' : 'text-[#dc2626]')) }}">{{ number_format($sCPct,1,',','.') }}%</p>
                 <p class="text-xs font-bold text-slate-400 uppercase mt-1">Serapan Anggaran</p>
             </div>
             <div class="flex-1 w-full">
                 <div class="w-full bg-slate-100 h-4 rounded-full overflow-hidden">
-                    <div class="h-full bg-blue-600 transition-all duration-500" style="width: {{ min(100, $sCPct) }}%"></div>
+                    <div class="h-full transition-all duration-500 {{ $sCPct >= 90 ? 'bg-[#16a34a]' : ($sCPct >= 60 ? 'bg-[#2563eb]' : ($sCPct >= 30 ? 'bg-[#f97316]' : 'bg-[#dc2626]')) }}" style="width: {{ min(100, $sCPct) }}%"></div>
                 </div>
                 <p class="text-right text-sm font-bold text-slate-600 mt-2">{{ fmtCard($cons) }} dari {{ fmtCard($rel) }}</p>
             </div>
@@ -855,7 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td class="py-3.5 px-4 text-right text-[15px] font-bold text-slate-700" x-text="fmt(r.commitment)"></td>
                                 <td class="py-3.5 px-4">
                                     <div class="w-full bg-slate-200/70 h-3 rounded-full overflow-hidden">
-                                        <div class="h-full transition-all duration-300" :class="pct(r.consume,r.release)>=90 ? 'bg-[#dc2626]' : pct(r.consume,r.release)>=60 ? 'bg-[#16a34a]' : pct(r.consume,r.release)>=30 ? 'bg-[#2563eb]' : 'bg-[#94a3b8]'" :style="'width:'+Math.min(100, pct(r.consume,r.release))+'%'"></div>
+                                        <div class="h-full transition-all duration-300" :class="pct(r.consume,r.release)>=90 ? 'bg-[#16a34a]' : pct(r.consume,r.release)>=60 ? 'bg-[#2563eb]' : pct(r.consume,r.release)>=30 ? 'bg-[#f97316]' : 'bg-[#dc2626]'" :style="'width:'+Math.min(100, pct(r.consume,r.release))+'%'"></div>
                                     </div>
                                 </td>
                                 <td class="py-3.5 px-4 text-right text-[15px] font-black text-slate-800" x-text="pct(r.consume,r.release).toFixed(1)+'%'"></td>
