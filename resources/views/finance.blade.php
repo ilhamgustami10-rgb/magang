@@ -19,23 +19,19 @@ if (!function_exists('fmtShort')) {
 }
 
 // ===== Hitung agregat Summary (semua cabang) =====
-$sumRkap     = 0;
-$sumRelease  = 0;
-$sumCommit   = 0;
-$sumConsume  = 0;
-$sumAvail    = 0;
-$allItems    = []; // kumpulan semua item lintas cabang
+$sumRkap    = $sumRkap ?? 0;
+$sumRelease = $sumRelease ?? 0;
+$sumCommit  = $sumCommit ?? 0;
+$sumConsume = $sumConsume ?? 0;
+$sumAvail   = $sumAvail ?? 0;
+$allItems   = []; // kumpulan semua item lintas cabang
 
 foreach ($financeData as $b) {
-    $sumRkap    += $b['rkap']       ?? 0;
-    $sumRelease += $b['release']    ?? 0;
-    $sumCommit  += $b['commitment'] ?? 0;
-    $sumConsume += $b['consume']    ?? 0;
-    $sumAvail   += $b['available']  ?? 0;
     foreach ($b['items'] ?? [] as $itm) {
         $allItems[] = $itm;
     }
 }
+
 
 $sumSRPct   = $sumRkap    > 0 ? ($sumRelease / $sumRkap    * 100) : 0;
 $sumSCPct   = $sumRelease > 0 ? ($sumConsume  / $sumRelease * 100) : 0;
@@ -138,10 +134,16 @@ foreach ($allItems as $itm) {
 
 <script>
 // HD Render Configuration
-Chart.defaults.devicePixelRatio = Math.max(window.devicePixelRatio||1, 2);
-Chart.defaults.font.size = 13;
+Chart.defaults.devicePixelRatio = Math.max(window.devicePixelRatio||1, 3);
+Chart.defaults.font.size = 15;
 Chart.defaults.color = '#475569';
 Chart.defaults.font.family = 'Segoe UI, system-ui, sans-serif';
+
+Chart.defaults.plugins.tooltip.bodyFont = { size: 16, family: 'Segoe UI, system-ui' };
+Chart.defaults.plugins.tooltip.titleFont = { size: 18, weight: 'bold', family: 'Segoe UI, system-ui' };
+Chart.defaults.plugins.tooltip.padding = 14;
+Chart.defaults.plugins.tooltip.cornerRadius = 12;
+Chart.defaults.plugins.tooltip.boxPadding = 6;
 
 // Custom plugin: center text donut
 const donutCenterTextPlugin = {
@@ -155,20 +157,48 @@ const donutCenterTextPlugin = {
         const width = chart.width;
         const height = chart.height;
         ctx.restore();
-        ctx.font = "900 36px 'Segoe UI', system-ui";
+        ctx.font = "900 48px 'Segoe UI', system-ui";
         ctx.textBaseline = "middle";
         ctx.textAlign = "center";
         ctx.fillStyle = '#0f172a';
         let textX = width / 2;
-        let textY = height / 2 - 10;
+        let textY = height / 2 - 12;
         ctx.fillText(opts.text, textX, textY);
-        ctx.font = "600 14px 'Segoe UI', system-ui";
+        ctx.font = "600 18px 'Segoe UI', system-ui";
         ctx.fillStyle = '#64748b';
-        ctx.fillText(opts.label, textX, textY + 28);
+        ctx.fillText(opts.label, textX, textY + 34);
         ctx.save();
     }
 };
 Chart.register(donutCenterTextPlugin);
+
+// Custom tooltip positioner to show tooltip outside the donut
+Chart.Tooltip.positioners.outer = function(elements, eventPosition) {
+    if (!elements.length) return false;
+    const arc = elements[0].element;
+    if (!arc || arc.outerRadius === undefined) return false;
+    const angle = (arc.startAngle + arc.endAngle) / 2;
+    const r = arc.outerRadius;
+    
+    let xAlign = 'center';
+    let yAlign = 'center';
+    
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    
+    if (cos > 0.1) xAlign = 'left';
+    else if (cos < -0.1) xAlign = 'right';
+    
+    if (sin > 0.5) yAlign = 'top';
+    else if (sin < -0.5) yAlign = 'bottom';
+    
+    return {
+        x: arc.x + cos * r,
+        y: arc.y + sin * r,
+        xAlign: xAlign,
+        yAlign: yAlign
+    };
+};
 
 document.addEventListener('alpine:init', () => {
 @foreach($financeData as $branchName => $branch)
@@ -250,7 +280,7 @@ document.addEventListener('alpine:init', () => {
                     cutout: '62%',
                     plugins: {
                         legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
-                        tooltip: { callbacks: { label: c => c.label + ': ' + this.fmt(c.raw) } },
+                        tooltip: { position: 'outer', callbacks: { label: c => c.label + ': ' + this.fmt(c.raw) } },
                         donutCenterText: { text: p.toFixed(1)+'%', label: 'Serapan' }
                     }
                 }
@@ -280,7 +310,7 @@ document.addEventListener('alpine:init', () => {
                     cutout: '62%',
                     plugins: {
                         legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
-                        tooltip: { callbacks: { label: c => c.label + ': ' + this.fmt(c.raw) } },
+                        tooltip: { position: 'outer', callbacks: { label: c => c.label + ': ' + this.fmt(c.raw) } },
                         donutCenterText: { text: p.toFixed(1)+'%', label: 'Tersisa' }
                     }
                 }
@@ -420,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 responsive: true, maintainAspectRatio: false, cutout: '62%',
                 plugins: {
                     legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
-                    tooltip: { callbacks: { label: c => 'Rp ' + Math.round(c.raw).toLocaleString('id-ID') } },
+                    tooltip: { position: 'outer', callbacks: { label: c => 'Rp ' + Math.round(c.raw).toLocaleString('id-ID') } },
                     donutCenterText: { text: pct.toFixed(1)+'%', label: 'Serapan' }
                 }
             }
@@ -444,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 responsive: true, maintainAspectRatio: false, cutout: '62%',
                 plugins: {
                     legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
-                    tooltip: { callbacks: { label: c => 'Rp ' + Math.round(c.raw).toLocaleString('id-ID') } },
+                    tooltip: { position: 'outer', callbacks: { label: c => 'Rp ' + Math.round(c.raw).toLocaleString('id-ID') } },
                     donutCenterText: { text: pct.toFixed(1)+'%', label: 'Tersisa' }
                 }
             }
@@ -459,10 +489,73 @@ document.addEventListener('DOMContentLoaded', () => {
     {{-- JUDUL "BUDGET USAGE MONITORING" — identik dgn Traffic --}}
     {{-- ================================================== --}}
     <div class="px-4 sm:px-6 lg:px-8 mb-6 pt-2">
-        <h2 class="flex items-center gap-4 text-[42px] font-black text-slate-800 tracking-tight">
-            <span>Budget Usage Monitoring</span>
-        </h2>
-        <div class="mt-3 h-1.5 w-20 bg-gradient-to-r from-orange-500 to-yellow-300 rounded-full"></div>
+        <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+            <div>
+                <h2 class="flex items-center gap-4 text-[42px] font-black text-slate-800 tracking-tight">
+                    <span>Budget Usage Monitoring</span>
+                </h2>
+                <div class="mt-3 h-1.5 w-20 bg-gradient-to-r from-orange-500 to-yellow-300 rounded-full"></div>
+            </div>
+            
+            <div class="flex items-center gap-2" x-data="{ refreshing: false, refreshingFolder: false, testingKoneksi: false }">
+                {{-- Tombol utama: Refresh Data SAP (jalankan bot + impor) --}}
+                <form action="{{ route('finance.refresh') }}" method="POST" @submit="refreshing = true">
+                    @csrf
+                    <button type="submit"
+                        :disabled="refreshing || refreshingFolder || testingKoneksi"
+                        :class="refreshing ? 'bg-indigo-400 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-700'"
+                        class="text-white font-bold py-2.5 px-6 rounded-full shadow-md transition-all whitespace-nowrap flex items-center gap-2 disabled:opacity-70">
+                        {{-- Icon: spinning saat loading, normal saat idle --}}
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" :class="refreshing ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span x-show="!refreshing">Refresh Data SAP</span>
+                        <span x-show="refreshing" x-cloak>Menarik data dari SAP... (jangan sentuh mouse/keyboard)</span>
+                    </button>
+                </form>
+                
+                {{-- Tombol Diagnosa: Test Koneksi SAP --}}
+                <form action="{{ route('finance.testKoneksi') }}" method="POST" @submit="testingKoneksi = true">
+                    @csrf
+                    <button type="submit"
+                        :disabled="refreshing || refreshingFolder || testingKoneksi"
+                        :class="testingKoneksi ? 'bg-emerald-300 cursor-wait' : 'bg-emerald-500 hover:bg-emerald-600'"
+                        class="text-white font-bold py-2.5 px-4 rounded-full shadow-md transition-all whitespace-nowrap flex items-center gap-2 disabled:opacity-70 text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="testingKoneksi ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span x-show="!testingKoneksi">Test Koneksi SAP</span>
+                        <span x-show="testingKoneksi" x-cloak>Menguji Koneksi...</span>
+                    </button>
+                </form>
+
+                {{-- Tombol cadangan: Impor dari folder saja (tanpa bot) --}}
+                <form action="{{ route('finance.refreshFromFolder') }}" method="POST" @submit="refreshingFolder = true">
+                    @csrf
+                    <button type="submit"
+                        :disabled="refreshing || refreshingFolder || testingKoneksi"
+                        :class="refreshingFolder ? 'bg-slate-400 cursor-wait' : 'bg-slate-100 hover:bg-slate-200'"
+                        class="text-slate-700 font-bold py-2.5 px-4 rounded-full border border-slate-300 transition-all whitespace-nowrap flex items-center gap-2 text-sm disabled:opacity-70">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        <span x-show="!refreshingFolder">Impor dari folder</span>
+                        <span x-show="refreshingFolder" x-cloak>Memproses file...</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        @if(session('success'))
+            <div class="mt-6 bg-emerald-100 border-l-4 border-emerald-500 text-emerald-800 p-4 rounded shadow-sm" role="alert">
+                <p class="font-medium">{{ session('success') }}</p>
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="mt-6 bg-red-100 border-l-4 border-red-500 text-red-800 p-4 rounded shadow-sm" role="alert">
+                <p class="font-medium">{{ session('error') }}</p>
+            </div>
+        @endif
     </div>
 
     {{-- ================================================== --}}
@@ -558,11 +651,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white rounded-[18px] p-6 shadow-sm border border-slate-100 flex flex-col">
                 <h2 class="text-lg font-black text-slate-800 mb-4">Release vs Total Consume</h2>
-                <div class="h-[380px] w-full flex-1"><canvas id="sum_rc"></canvas></div>
+                <div class="h-[460px] w-full flex-1"><canvas id="sum_rc"></canvas></div>
             </div>
             <div class="bg-white rounded-[18px] p-6 shadow-sm border border-slate-100 flex flex-col">
                 <h2 class="text-lg font-black text-slate-800 mb-4">Consume vs Available Budget</h2>
-                <div class="h-[380px] w-full flex-1"><canvas id="sum_ca"></canvas></div>
+                <div class="h-[460px] w-full flex-1"><canvas id="sum_ca"></canvas></div>
             </div>
         </div>
 
@@ -767,7 +860,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                 </div>
-                <div class="h-[480px] w-full flex-1"><canvas id="rc_{{ $bid }}"></canvas></div>
+                <div class="h-[560px] w-full flex-1"><canvas id="rc_{{ $bid }}"></canvas></div>
             </div>
             
             <!-- CA -->
@@ -788,7 +881,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                 </div>
-                <div class="h-[480px] w-full flex-1"><canvas id="ca_{{ $bid }}"></canvas></div>
+                <div class="h-[560px] w-full flex-1"><canvas id="ca_{{ $bid }}"></canvas></div>
             </div>
         </div>
         
@@ -796,11 +889,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white rounded-[18px] p-6 shadow-sm border border-slate-100 flex flex-col overflow-y-auto" style="max-height: 800px;">
                 <h2 class="text-lg font-black text-slate-800 mb-4 sticky top-0 bg-white z-10 pb-2 border-b border-slate-100">Konsumsi Tertinggi</h2>
-                <div :style="'height: ' + Math.max(460, rawData.length * 35) + 'px'" class="w-full mt-2"><canvas id="bar_c_{{ $bid }}"></canvas></div>
+                <div :style="'height: ' + Math.max(560, rawData.length * 40) + 'px'" class="w-full mt-2"><canvas id="bar_c_{{ $bid }}"></canvas></div>
             </div>
             <div class="bg-white rounded-[18px] p-6 shadow-sm border border-slate-100 flex flex-col overflow-y-auto" style="max-height: 800px;">
                 <h2 class="text-lg font-black text-slate-800 mb-4 sticky top-0 bg-white z-10 pb-2 border-b border-slate-100">Sisa Anggaran Tertinggi</h2>
-                <div :style="'height: ' + Math.max(460, rawData.length * 35) + 'px'" class="w-full mt-2"><canvas id="bar_a_{{ $bid }}"></canvas></div>
+                <div :style="'height: ' + Math.max(560, rawData.length * 40) + 'px'" class="w-full mt-2"><canvas id="bar_a_{{ $bid }}"></canvas></div>
             </div>
         </div>
 
