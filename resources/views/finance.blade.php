@@ -497,27 +497,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="mt-3 h-1.5 w-20 bg-gradient-to-r from-orange-500 to-yellow-300 rounded-full"></div>
             </div>
             
-            <div class="flex items-center gap-3" x-data="{ refreshing: false, testingKoneksi: false }">
-                {{-- Tombol Diagnosa: Test Koneksi SAP (Secondary/Outline) --}}
-                <form action="{{ route('finance.testKoneksi') }}" method="POST" @submit="testingKoneksi = true">
-                    @csrf
-                    <button type="submit"
-                        :disabled="refreshing || testingKoneksi"
-                        :class="testingKoneksi ? 'border-slate-300 text-slate-400 cursor-wait' : 'border-indigo-600 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700'"
-                        class="font-bold py-2.5 px-5 rounded-full border-2 transition-all whitespace-nowrap flex items-center gap-2 text-sm disabled:opacity-70 bg-transparent">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="testingKoneksi ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        <span x-show="!testingKoneksi">Test Koneksi SAP</span>
-                        <span x-show="testingKoneksi" x-cloak>Mengecek koneksi...</span>
-                    </button>
-                </form>
-
+            <div class="flex items-center gap-3" x-data="{ refreshing: false }">
                 {{-- Tombol utama: Refresh Data SAP (Primary) --}}
                 <form action="{{ route('finance.refresh') }}" method="POST" @submit="refreshing = true">
                     @csrf
                     <button type="submit"
-                        :disabled="refreshing || testingKoneksi"
+                        :disabled="refreshing"
                         :class="refreshing ? 'bg-indigo-400 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-700'"
                         class="text-white font-bold py-2.5 px-6 rounded-full shadow-md transition-all whitespace-nowrap flex items-center gap-2 disabled:opacity-70">
                         {{-- Icon: spinning saat loading, normal saat idle --}}

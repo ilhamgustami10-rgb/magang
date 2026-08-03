@@ -14,7 +14,6 @@
                 <a href="{{ route($source['route']) }}" class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                     <p class="text-sm font-bold text-slate-500">{{ $source['label'] }}</p>
                     <p class="mt-3 text-3xl font-black text-slate-800">{{ number_format($source['records'], 0, ',', '.') }}</p>
-                    <p class="mt-1 text-xs text-slate-400">record tersimpan@if(!is_null($source['uploads'])) · {{ $source['uploads'] }} file upload@endif</p>
                     <span class="mt-5 inline-block text-xs font-bold text-blue-600">Buka data →</span>
                 </a>
             @endforeach

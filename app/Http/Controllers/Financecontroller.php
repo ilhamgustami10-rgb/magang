@@ -201,35 +201,20 @@ class FinanceController extends Controller
             }
 
             // ── 4. Petakan EXIT CODE → aksi & pesan ─────────────────
-            if ($exitCode === 1) {
-                return redirect()->back()->with('error',
-                    'Gagal: SAP belum login / tidak ada sesi aktif. Pastikan SAP GUI terbuka & login.'
-                );
-            }
-            if ($exitCode === 2) {
-                return redirect()->back()->with('error',
-                    'Gagal membuka laporan di SAP (kode transaksi/menu). Cek layar SAP.'
-                );
-            }
-            if ($exitCode !== 0) {
-                $snippetStderr = mb_substr(trim($stderr ?: $stdout), 0, 300);
-                return redirect()->back()->with('error',
-                    "Bot selesai dengan error ({$exitCode}). Rincian: {$snippetStderr}"
-                );
-            }
-
-            // ── 5. Verifikasi HASIL FILE sebelum impor ──────────────
-            // Cari file .csv terbaru di folder export yang dibuat SETELAH proses bot dimulai
-            $newFile = $this->findNewestExportFile($exportDir, $startTime);
+            // ── 4. Verifikasi HASIL FILE sebelum impor ──────────────
+            // Cari file target: selalu ambil file terbaru (mtime paling baru) di folder D:\Sap_export
+            $newFile = $this->findNewestExportFile($exportDir);
 
             if (!$newFile) {
-                Log::warning('SAP Refresh: Bot selesai sukses tapi tidak ada file baru ditemukan', [
-                    'export_dir' => $exportDir,
-                    'start_time' => date('Y-m-d H:i:s', $startTime),
-                ]);
-                return redirect()->back()->with('error',
-                    'Bot selesai tapi tidak ada file baru ditemukan di folder export. Cek apakah SAP benar-benar mengekspor file.'
-                );
+                if ($exitCode !== 0) {
+                    return redirect()->back()->with('success',
+                        'Belum ada data. Silakan login SAP lalu klik Refresh.'
+                    );
+                } else {
+                    return redirect()->back()->with('error',
+                        'Bot selesai tapi tidak ada file baru ditemukan di folder export. Cek apakah SAP benar-benar mengekspor file.'
+                    );
+                }
             }
 
             // Pastikan file sudah selesai ditulis (cek ukuran stabil)
@@ -238,9 +223,9 @@ class FinanceController extends Controller
             $filePath = $newFile->getRealPath();
             $fileName = $newFile->getFilename();
 
-            Log::info("SAP Refresh: File ditemukan — {$fileName} ({$newFile->getSize()} bytes)");
+            Log::info("SAP Refresh: File target ditemukan — {$fileName} ({$newFile->getSize()} bytes)");
 
-            // ── 6. Jalankan proses IMPORT ────────────────────────────
+            // ── 5. Jalankan proses IMPORT ────────────────────────────
             $importSuccess = false;
             $count = 0;
             $totalCabang = 0;
@@ -250,30 +235,36 @@ class FinanceController extends Controller
                 $stats = $importService->import($filePath, $fileName, 'sap_bot');
 
                 $reportDate = now()->format('Y-m-d');
-                $totalCabang = BudgetRealisasi::where('level', 'cabang')
-                    ->where('report_date', $reportDate)
-                    ->count();
+                $count = BudgetRealisasi::where('report_date', $reportDate)->count();
+                $totalCabang = BudgetRealisasi::where('report_date', $reportDate)
+                    ->distinct('branch_code')->count('branch_code');
 
-                $count = $stats['rows_imported'];
                 $importSuccess = true;
 
-                Log::info("SAP Refresh: Berhasil — {$count} baris, {$totalCabang} cabang", $stats);
+                Log::info("SAP Refresh: Berhasil impor — {$count} baris, {$totalCabang} cabang", $stats);
             } catch (\Exception $e) {
                 $errorMessage = $e->getMessage();
-                Log::error("SAP Refresh: Parse/import gagal untuk {$fileName}: " . $errorMessage);
+                Log::error("SAP Refresh: Parse/import gagal untuk {$fileName}: " . $errorMessage . ' @ ' . $e->getFile() . ':' . $e->getLine());
             }
 
-            // Pindahkan file di LUAR try-catch agar kegagalan move tidak menggagalkan status success import
+            // COPY file ke archive, file asli dibiarkan sebagai fallback
             if ($importSuccess) {
-                if (!$this->safeMoveFile($filePath, $archivePath . '/' . $fileName)) {
-                    Log::warning("SAP Refresh: Data berhasil diimpor, tapi gagal memindah file ke archive. (Mungkin terkunci Excel)");
+                if (!$this->safeCopyFile($filePath, $archivePath . '/' . $fileName)) {
+                    Log::warning("SAP Refresh: Data berhasil diimpor, tapi gagal menyalin file ke archive. (Mungkin terkunci Excel)");
                 }
-                return redirect()->back()->with('success',
-                    "Berhasil tarik data dari SAP: {$count} baris, {$totalCabang} cabang diimpor."
-                );
+                
+                if ($exitCode === 0) {
+                    $msg = "Berhasil tarik data terbaru dari SAP: {$count} baris, {$totalCabang} cabang diimpor.";
+                } elseif ($exitCode === 1) {
+                    $msg = "SAP sedang tidak login, mengambil data dari folder: {$count} baris, {$totalCabang} cabang.";
+                } else {
+                    $msg = "Gagal ambil data baru dari SAP — menampilkan data terakhir dari folder: {$count} baris, {$totalCabang} cabang.";
+                }
+                
+                return redirect()->back()->with('success', $msg);
             } else {
-                if (!$this->safeMoveFile($filePath, $failedPath . '/' . $fileName)) {
-                    Log::warning("SAP Refresh: Data gagal diimpor dan gagal memindah file ke failed. (Mungkin terkunci Excel)");
+                if (!$this->safeCopyFile($filePath, $failedPath . '/' . $fileName)) {
+                    Log::warning("SAP Refresh: Data gagal diimpor dan gagal menyalin file ke failed. (Mungkin terkunci Excel)");
                 }
                 return redirect()->back()->with('error',
                     "File diterima dari SAP tapi gagal diproses: " . $errorMessage
@@ -281,7 +272,7 @@ class FinanceController extends Controller
             }
 
         } catch (\Exception $e) {
-            Log::error('SAP Refresh: Error tidak terduga — ' . $e->getMessage(), [
+            Log::error('SAP Refresh: Error tidak terduga — ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine(), [
                 'trace' => $e->getTraceAsString(),
             ]);
             return redirect()->back()->with('error',
@@ -295,39 +286,33 @@ class FinanceController extends Controller
 
 
     /**
-     * Helper untuk memindahkan file dengan aman meski terkunci oleh proses lain (misal: Excel)
+     * Helper untuk menyalin file dengan aman meski terkunci oleh proses lain (misal: Excel)
      */
-    private function safeMoveFile(string $from, string $to): bool
+    private function safeCopyFile(string $from, string $to): bool
     {
         $dir = dirname($to);
         if (!is_dir($dir)) { @mkdir($dir, 0777, true); }
         for ($i = 0; $i < 5; $i++) {
-            if (@rename($from, $to)) return true;
-            if (@copy($from, $to)) {
-                if (@unlink($from)) return true;
-                \Illuminate\Support\Facades\Log::warning("safeMoveFile: tersalin tapi sumber terkunci (mungkin dibuka Excel): {$from}");
-                return true;
-            }
+            if (@copy($from, $to)) return true;
             usleep(500000); // tunggu 0.5 detik
         }
-        \Illuminate\Support\Facades\Log::warning("safeMoveFile: gagal memindah {$from} -> {$to} (mungkin terkunci proses lain)");
+        \Illuminate\Support\Facades\Log::warning("safeCopyFile gagal: {$from} -> {$to}");
         return false;
     }
 
     /**
-     * Cari file .csv/.txt/.xlsx/.xls TERBARU di folder yang dibuat SETELAH $afterTimestamp.
+     * Cari file .csv/.txt/.xlsx/.xls TERBARU di folder.
      */
-    private function findNewestExportFile(string $dir, int $afterTimestamp): ?\SplFileInfo
+    private function findNewestExportFile(string $dir): ?\SplFileInfo
     {
         if (!File::isDirectory($dir)) {
             return null;
         }
 
         $candidates = collect(File::files($dir))
-            ->filter(function ($file) use ($afterTimestamp) {
+            ->filter(function ($file) {
                 $ext = strtolower($file->getExtension());
-                return in_array($ext, ['csv', 'txt', 'xlsx', 'xls'])
-                    && $file->getMTime() >= $afterTimestamp;
+                return in_array($ext, ['csv', 'txt', 'xlsx', 'xls']);
             })
             ->sortByDesc(function ($file) {
                 return $file->getMTime();
@@ -357,43 +342,5 @@ class FinanceController extends Controller
         }
     }
 
-    /**
-     * TOMBOL DIAGNOSA: Test Koneksi SAP
-     * Hanya mengetes apakah bot (VBS) bisa mendeteksi GUI SAP.
-     */
-    public function testKoneksi()
-    {
-        $cscript = config('sap.cscript_path', 'C:\Windows\System32\cscript.exe');
-        $command = $cscript . ' //nologo "' . base_path('bot/test_koneksi_sap.vbs') . '"';
-        Log::info("SAP Test Koneksi: Menjalankan {$command}");
-
-        $process = Process::fromShellCommandline($command);
-        $process->setWorkingDirectory(base_path('bot'));
-        $process->setTimeout(30);
-
-        try {
-            $process->run();
-        } catch (ProcessTimedOutException $e) {
-            Log::error('SAP Test Koneksi: Timeout', [
-                'stdout' => $process->getOutput(),
-                'stderr' => $process->getErrorOutput(),
-            ]);
-            return redirect()->back()->with('error', 'Gagal: Bot timeout. Pastikan tidak ada popup di SAP.');
-        }
-
-        $exitCode = $process->getExitCode();
-        $output = trim($process->getOutput());
-        $error = trim($process->getErrorOutput());
-        
-        $finalOutput = $output;
-        if ($error) {
-            $finalOutput .= " | ERROR: " . $error;
-        }
-
-        if ($exitCode === 0) {
-            return redirect()->back()->with('success', "SUKSES: " . $finalOutput);
-        } else {
-            return redirect()->back()->with('error', "GAGAL (Exit {$exitCode}): " . $finalOutput);
-        }
-    }
+    // 
 }

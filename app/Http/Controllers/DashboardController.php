@@ -23,7 +23,7 @@ class DashboardController extends Controller
             ['label' => 'Traffic Movement', 'records' => TrafficData::count(), 'uploads' => TrafficUpload::count(), 'route' => 'admin.traffic.index'],
             ['label' => 'Enroute', 'records' => EnrouteData::count(), 'uploads' => EnrouteUpload::count(), 'route' => 'admin.enroutes.index'],
             ['label' => 'Terminal', 'records' => TerminalData::count(), 'uploads' => TerminalUpload::count(), 'route' => 'admin.terminals.index'],
-            ['label' => 'Finance', 'records' => \App\Models\FinanceItem::count(), 'uploads' => \App\Models\FinanceUpload::count(), 'route' => 'admin.finances.index'],
+            ['label' => 'Finance', 'records' => \App\Models\BudgetRealisasi::count(), 'uploads' => \App\Models\FinanceUpload::count(), 'route' => 'admin.finances.index'],
         ];
 
         return view('admin.dashboard', [
@@ -31,7 +31,7 @@ class DashboardController extends Controller
             'totalRecords' => collect($sources)->sum('records'),
             'lastInputAt' => collect([
                 TrafficData::max('updated_at'), EnrouteData::max('updated_at'),
-                TerminalData::max('updated_at'), \App\Models\FinanceItem::max('updated_at'), Airline::max('updated_at'),
+                TerminalData::max('updated_at'), \App\Models\BudgetRealisasi::max('updated_at'), Airline::max('updated_at'),
             ])->filter()->max(),
         ]);
     }
