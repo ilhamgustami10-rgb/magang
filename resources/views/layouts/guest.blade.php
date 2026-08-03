@@ -7,6 +7,10 @@
 
         <title>Dashboard Monitoring – AirNav Surabaya</title>
 
+        <!-- Favicon -->
+        <link rel="icon" type="image/png" href="{{ asset('images/airnav-logo.png') }}">
+        <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -16,6 +20,9 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+        <!-- Favicon -->
+        <link rel="icon" type="image/png" href="{{ asset('images/airnav-logo.png') }}">
+        
         <style>
             * { font-family: 'Inter', sans-serif; }
 
@@ -23,153 +30,184 @@
                 margin: 0;
                 padding: 0;
                 min-height: 100vh;
-                background-image: url('/images/airnav_bg.png');
-                background-size: cover;
-                background-position: center;
-                background-attachment: fixed;
+                background-color: #0a0a0a;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 24px;
             }
 
-            .bg-overlay {
-                position: fixed;
+            .login-box {
+                width: 100%;
+                max-width: 1120px;
+                min-height: 620px;
+                background: #ffffff;
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+                display: flex;
+                flex-direction: row;
+                position: relative;
+            }
+
+            .login-left {
+                width: 45%;
+                background: #ffffff;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 40px 48px;
+                position: relative;
+                z-index: 20;
+                clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%);
+            }
+
+            .login-right {
+                position: absolute;
+                top: 0; right: 0; bottom: 0;
+                width: 60%;
+                z-index: 10;
+            }
+
+            @media (max-width: 768px) {
+                .login-box {
+                    flex-direction: column;
+                    min-height: auto;
+                }
+                .login-left {
+                    width: 100%;
+                    clip-path: none;
+                    padding: 32px 24px;
+                }
+                .login-right {
+                    display: none; /* Hide photo on small screens to prioritize form */
+                }
+            }
+
+            .login-bg-slide { 
+                position: absolute; 
+                inset: 0; 
+                width: 100%; 
+                height: 100%;
+                opacity: 0; 
+                transition: opacity 1.5s ease-in-out;
+            }
+            .login-bg-slide img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                object-position: center;
+                image-rendering: high-quality;
+            }
+            .login-bg-slide.active { opacity: 1; }
+            
+            @media (prefers-reduced-motion: reduce) {
+                .login-bg-slide { transition: none; }
+            }
+            
+            .right-overlay {
+                position: absolute;
                 inset: 0;
-                background: linear-gradient(
-                    135deg,
-                    rgba(3, 7, 30, 0.80) 0%,
-                    rgba(8, 18, 60, 0.70) 40%,
-                    rgba(3, 10, 30, 0.85) 100%
-                );
-                z-index: 0;
-            }
-
-            .login-card {
-                background: rgba(255, 255, 255, 0.10);
-                backdrop-filter: blur(24px);
-                -webkit-backdrop-filter: blur(24px);
-                border: 1px solid rgba(255, 255, 255, 0.18);
-                box-shadow:
-                    0 32px 64px rgba(0, 0, 0, 0.5),
-                    0 0 0 1px rgba(255,255,255,0.05) inset;
-            }
-
-            .form-input-glass {
-                background: rgba(255, 255, 255, 0.10);
-                border: 1px solid rgba(255, 255, 255, 0.20);
-                color: #ffffff;
-                transition: all 0.2s ease;
-            }
-
-            .form-input-glass::placeholder {
-                color: rgba(255, 255, 255, 0.35);
-            }
-
-            .form-input-glass:focus {
-                background: rgba(255, 255, 255, 0.16);
-                border-color: rgba(99, 179, 237, 0.60);
-                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.20);
-                outline: none;
-                color: #ffffff;
-            }
-
-            .label-glass {
-                color: rgba(255, 255, 255, 0.60);
-                font-size: 0.65rem;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.12em;
-            }
-
-            .btn-login {
-                background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-                border: 1px solid rgba(255,255,255,0.15);
-                box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45);
-                transition: all 0.2s ease;
-            }
-
-            .btn-login:hover {
-                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-                box-shadow: 0 12px 32px rgba(37, 99, 235, 0.60);
-                transform: translateY(-1px);
-            }
-
-            .btn-login:active {
-                transform: translateY(0);
-            }
-
-            .logo-ring {
-                background: linear-gradient(135deg, #1e40af, #0ea5e9);
-                animation: pulse-ring 2.5s ease-in-out infinite;
-            }
-
-            @keyframes pulse-ring {
-                0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.45); }
-                70%  { box-shadow: 0 0 0 14px rgba(59,130,246,0); }
-                100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
-            }
-
-            /* Decorative floating orbs */
-            .orb {
-                position: fixed;
-                border-radius: 50%;
-                filter: blur(80px);
-                opacity: 0.12;
-                pointer-events: none;
-                z-index: 0;
+                background: linear-gradient(to right, rgba(0,0,0,0.1), rgba(10,20,45,0.5));
+                z-index: 15;
             }
         </style>
     </head>
     <body class="antialiased">
+        
+        @php
+            $loginImages = glob(public_path('images/login/*.{webp,jpg,jpeg,png}'), GLOB_BRACE);
+            $loginImages = array_filter($loginImages, function($path) {
+                return !str_contains($path, '-mobile');
+            });
+            $loginImages = array_values($loginImages);
+            
+            $loginImages = $loginImages ? array_map(function($path) {
+                return 'images/login/' . basename($path);
+            }, $loginImages) : [];
+            if(empty($loginImages)) {
+                $loginImages = ['images/airnav_bg.png']; // fallback
+            }
+        @endphp
 
-        <!-- Dark overlay on top of BG image -->
-        <div class="bg-overlay"></div>
-
-        <!-- Decorative orbs -->
-        <div class="orb" style="width:500px;height:500px;background:#3b82f6;top:-100px;left:-100px;"></div>
-        <div class="orb" style="width:400px;height:400px;background:#06b6d4;bottom:-80px;right:-80px;"></div>
-
-        <!-- Full-screen centering wrapper -->
-        <div class="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-10">
-
-            <!-- Top Branding -->
-            <div class="flex flex-col items-center gap-3 mb-8">
-                <!-- Logo -->
-                <div class="logo-ring w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-9 h-9 text-white" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
-                    </svg>
-                </div>
-
-                <!-- Title -->
-                <div class="text-center">
-                    <p class="text-white/50 text-[10px] font-bold uppercase tracking-[0.3em]">Perum LPPNPI</p>
-                    <h1 class="text-white text-3xl font-black tracking-tight leading-tight mt-0.5">AirNav Indonesia</h1>
-                    <p class="text-sky-300 text-sm font-semibold tracking-wider mt-0.5">Cabang Surabaya</p>
-                </div>
-
-                <!-- Badge -->
-                <span class="inline-flex items-center gap-1.5 bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-widest">
-                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
-                    Dashboard Monitoring System
-                </span>
-            </div>
-
-            <!-- Login Card -->
-            <div class="login-card rounded-3xl w-full max-w-md p-8 sm:p-10">
-                <div class="mb-7 text-center">
-                    <h2 class="text-white text-2xl font-black tracking-tight">Selamat Datang</h2>
-                    <p class="text-white/50 text-sm font-medium mt-1">Masuk untuk mengakses dashboard monitoring</p>
+        <!-- Main Box Container -->
+        <div class="login-box">
+            
+            <!-- Left Panel (Form) -->
+            <div class="login-left">
+                <div class="mb-8">
+                    <img src="{{ asset('images/airnav-logo.png') }}" alt="AirNav Logo" class="h-12 mb-4 object-contain">
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Perum LPPNPI</p>
+                    <h2 class="text-blue-900 text-2xl font-black tracking-tight">Selamat Datang</h2>
+                    <p class="text-slate-500 text-xs mt-1 font-medium">Masuk untuk mengakses dashboard monitoring</p>
                 </div>
 
                 <!-- Slot: form -->
                 {{ $slot }}
+                
+                <div class="mt-10 pt-4 border-t border-slate-100 text-left">
+                    <p class="text-slate-400 text-[10px] font-medium">
+                        &copy; {{ date('Y') }} AirNav Indonesia &mdash; Cabang Surabaya
+                    </p>
+                </div>
             </div>
 
-            <!-- Footer -->
-            <div class="mt-6 text-center">
-                <p class="text-white/25 text-xs font-medium">
-                    © {{ date('Y') }} AirNav Indonesia – Cabang Surabaya &nbsp;·&nbsp; Dashboard Monitoring v1.0
-                </p>
+            <!-- Right Panel (Photo & Headline) -->
+            <div class="login-right">
+                @foreach($loginImages as $i => $img)
+                    @php
+                        $ext = pathinfo($img, PATHINFO_EXTENSION);
+                        $basename = basename($img, '.'.$ext);
+                        $mobileImg = 'images/login/' . $basename . '-mobile.' . $ext;
+                        $hasMobile = file_exists(public_path($mobileImg));
+                    @endphp
+                    
+                    @if($hasMobile)
+                        <link rel="preload" as="image" href="{{ asset($mobileImg) }}" media="(max-width: 1023px)">
+                        <link rel="preload" as="image" href="{{ asset($img) }}" media="(min-width: 1024px)">
+                    @else
+                        <link rel="preload" as="image" href="{{ asset($img) }}">
+                    @endif
+                    
+                    <picture class="login-bg-slide {{ $i === 0 ? 'active' : '' }}">
+                        @if($hasMobile)
+                            <source media="(min-width: 1024px)" srcset="{{ asset($img) }}">
+                            <source media="(max-width: 1023px)" srcset="{{ asset($mobileImg) }}">
+                        @endif
+                        <img src="{{ asset($img) }}" alt="AirNav Background" class="w-full h-full object-cover">
+                    </picture>
+                @endforeach
+                
+                <div class="right-overlay"></div>
+                
+                <!-- Headline over photo -->
+                <div class="absolute inset-0 z-20 flex flex-col justify-center items-end p-12 text-right pointer-events-none">
+                    <h1 class="text-white text-4xl font-black tracking-tight drop-shadow-lg mb-2">
+                        AIRNAV INDONESIA
+                    </h1>
+                    <p class="text-white/90 text-sm font-medium drop-shadow-md max-w-xs">
+                        Dashboard Monitoring System &mdash; Cabang Surabaya
+                    </p>
+                </div>
             </div>
 
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                if(prefersReducedMotion) return;
+
+                const slides = document.querySelectorAll('.login-bg-slide');
+                let idx = 0;
+                if(slides.length > 1) {
+                    setInterval(() => {
+                        slides[idx].classList.remove('active');
+                        idx = (idx + 1) % slides.length;
+                        slides[idx].classList.add('active');
+                    }, 6000);
+                }
+            });
+        </script>
     </body>
 </html>
