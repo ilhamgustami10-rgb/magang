@@ -19,8 +19,8 @@ fmArea       = "1000"                ' Financial Management Area (ctxt$4FFIKRS)
 Dim sapSystem, sapClient, sapUser, sapPass, sapLang, logoutAfter
 sapSystem   = "INTERNET PROD - AEP" ' <-- dari SAP Logon (kolom Name)
 sapClient   = "300"                ' <-- dari recording-mu (client 300)
-sapUser     = "A022C03029"          ' <-- dari recording-mu (user SAP)
-sapPass     = "Sapsurabaya17"       ' <-- password (AMANKAN file ini!)
+sapUser     = "A022C05074"          ' <-- dari recording-mu (user SAP)
+sapPass     = "13Maret2026"       ' <-- password (AMANKAN file ini!)
 sapLang     = "EN"                  ' <-- sesuai layar login (EN)
 logoutAfter = True                  ' <-- True: logout otomatis setelah export (jika bot yang login)
 
