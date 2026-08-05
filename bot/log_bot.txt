@@ -1,0 +1,71 @@
+================================================== 
+[Wed 08/05/2026 13:40:17.41] Mulai export SAP 
+GAGAL 1: SAP GUI / SAP Logon tidak ditemukan. Pastikan aplikasi SAP Logon terbuka.
+[Wed 08/05/2026 13:40:17.70] Selesai (exit code 1) 
+ 
+================================================== 
+[Wed 08/05/2026 13:41:25.25] Mulai export SAP 
+GAGAL 1: SAP GUI / SAP Logon tidak ditemukan. Pastikan aplikasi SAP Logon terbuka.
+[Wed 08/05/2026 13:41:25.37] Selesai (exit code 1) 
+ 
+================================================== 
+[Wed 08/05/2026 13:44:29.65] Mulai export SAP 
+SUKSES: file tersimpan di D:\Sap_export\realisasi_20260805_1344.csv
+[Wed 08/05/2026 13:44:39.96] Selesai (exit code 0) 
+ 
+================================================== 
+[Wed 08/05/2026 13:54:43.16] (1) Mulai export SAP 
+SUKSES: file tersimpan di D:\Sap_export\realisasi_20260805_1354.csv
+[Wed 08/05/2026 13:55:01.93] Export selesai (exit code 0) 
+================================================== 
+[Wed 08/05/2026 14:00:04.09] (1) Mulai export SAP 
+SUKSES: file tersimpan di D:\Sap_export\realisasi_20260805_1400.csv
+[Wed 08/05/2026 14:00:16.33] Export selesai (exit code 0) 
+================================================== 
+[Wed 08/05/2026 14:03:04.26] LANGKAH 1 - Mulai export SAP 
+SUKSES: file tersimpan di D:\Sap_export\realisasi_20260805_1403.csv
+[Wed 08/05/2026 14:03:13.93] Export selesai - exit code 0 
+[Wed 08/05/2026 14:03:13.93] LANGKAH 2 - Mulai impor ke dashboard 
+Impor sukses: 77 baris, 5 cabang dari realisasi_20260805_1403.csv
+[Wed 08/05/2026 14:03:18.95] Impor selesai - exit code 0 
+ 
+================================================== 
+[Wed 08/05/2026 14:10:18.42] LANGKAH 1 - Mulai export SAP 
+SUKSES: file tersimpan di D:\Sap_export\realisasi_20260805_1410.csv
+[Wed 08/05/2026 14:10:40.25] Export selesai - exit code 0 
+[Wed 08/05/2026 14:10:40.27] LANGKAH 2 - Mulai impor ke dashboard 
+Impor sukses: 77 baris, 5 cabang dari realisasi_20260805_1410.csv
+[Wed 08/05/2026 14:10:46.70] Impor selesai - exit code 0 
+ 
+================================================== 
+[Wed 08/05/2026 14:18:55.75] LANGKAH 1 - Mulai export SAP 
+SUKSES: file tersimpan di D:\Sap_export\realisasi_20260805_1418.csv
+[Wed 08/05/2026 14:19:07.26] Export selesai - exit code 0 
+[Wed 08/05/2026 14:19:07.27] LANGKAH 2 - Mulai impor ke dashboard 
+Impor sukses: 77 baris, 5 cabang dari realisasi_20260805_1418.csv
+[Wed 08/05/2026 14:19:11.61] Impor selesai - exit code 0 
+ 
+================================================== 
+[Wed 08/05/2026 14:28:05.63] LANGKAH 1 - Mulai export SAP 
+SUKSES: file tersimpan di D:\Sap_export\realisasi_20260805_1428.csv
+[Wed 08/05/2026 14:28:17.55] Export selesai - exit code 0 
+[Wed 08/05/2026 14:28:17.55] LANGKAH 2 - Mulai impor ke dashboard 
+Impor sukses: 77 baris, 5 cabang dari realisasi_20260805_1428.csv
+[Wed 08/05/2026 14:28:22.22] Impor selesai - exit code 0 
+ 
+================================================== 
+[Wed 08/05/2026 14:31:06.63] LANGKAH 1 - Mulai export SAP 
+SUKSES: file tersimpan di D:\Sap_export\realisasi_20260805_1431.csv
+[Wed 08/05/2026 14:31:20.07] Export selesai - exit code 0 
+[Wed 08/05/2026 14:31:20.07] LANGKAH 2 - Mulai impor ke dashboard 
+Impor sukses: 77 baris, 5 cabang dari realisasi_20260805_1431.csv
+[Wed 08/05/2026 14:31:21.96] Impor selesai - exit code 0 
+ 
+================================================== 
+[Wed 08/05/2026 14:39:53.61] LANGKAH 1 - Mulai export SAP 
+SUKSES: file tersimpan di D:\Sap_export\realisasi_20260805_1439.csv
+[Wed 08/05/2026 14:40:10.00] Export selesai - exit code 0 
+[Wed 08/05/2026 14:40:10.01] LANGKAH 2 - Mulai impor ke dashboard 
+Impor sukses: 77 baris, 5 cabang dari realisasi_20260805_1439.csv
+[Wed 08/05/2026 14:40:15.26] Impor selesai - exit code 0 
+ 

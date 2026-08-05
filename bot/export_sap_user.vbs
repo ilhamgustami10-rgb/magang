@@ -17,11 +17,11 @@ fmArea       = "1000"                ' Financial Management Area (ctxt$4FFIKRS)
 ' Dipakai HANYA jika belum ada sesi SAP yang login (mode auto-login).
 ' Jika sudah ada yang login, skrip memakai sesi itu & nilai di bawah DIABAIKAN.
 Dim sapSystem, sapClient, sapUser, sapPass, sapLang, logoutAfter
-sapSystem   = "INTERNET PROD - AEP" ' <-- dari SAP Logon (kolom Name)
+sapSystem   = "NAMA_SISTEM_SAP"     ' <-- nama entri di SAP Logon pad (mis. "PRD")
 sapClient   = "300"                ' <-- dari recording-mu (client 300)
 sapUser     = "A022C03029"          ' <-- dari recording-mu (user SAP)
-sapPass     = "Sapsurabaya17"       ' <-- password (AMANKAN file ini!)
-sapLang     = "EN"                  ' <-- sesuai layar login (EN)
+sapPass     = "PASSWORD_SAP"        ' <-- password (AMANKAN file ini!)
+sapLang     = "EN"                  ' <-- bahasa login (EN / ID)
 logoutAfter = True                  ' <-- True: logout otomatis setelah export (jika bot yang login)
 
 '---------- Buat nama file otomatis bertanggal ----------

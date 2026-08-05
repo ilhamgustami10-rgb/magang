@@ -27,6 +27,13 @@ Route::get('/sap-dashboard', [SapDashboardController::class, 'index'])->name('sa
 Route::post('/sap/import', [SapDashboardController::class, 'import'])->name('sap.import');
 Route::get('/api/budget-realisasi', [SapDashboardController::class, 'apiData'])->name('sap.api');
 
+Route::get('/dashboard/last-update', function () {
+    $log = \App\Models\ImportLog::latest('created_at')->first();
+    return response()->json([
+        'last_update'         => $log ? $log->created_at->toIso8601String() : null,
+        'last_update_display' => $log ? $log->created_at->setTimezone('Asia/Jakarta')->format('H:i \\W\\I\\B') : '-',
+    ]);
+})->name('dashboard.last_update');
 Route::get('/personnel', function () {
     return view('personnel');
 })->name('personnel');

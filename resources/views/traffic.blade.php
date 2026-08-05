@@ -887,4 +887,36 @@ if (lineTraffic) {
     });
 }
 </script>
+
+<script>
+(function() {
+    let knownLastUpdate = null;
+
+    function checkForUpdates() {
+        fetch('/dashboard/last-update', {
+            headers: { 'Accept': 'application/json' },
+            cache: 'no-store'
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.last_update) return;
+
+            if (knownLastUpdate === null) {
+                // Pertama kali: simpan sebagai baseline, jangan reload
+                knownLastUpdate = data.last_update;
+                return;
+            }
+
+            if (data.last_update !== knownLastUpdate) {
+                window.location.reload();
+            }
+        })
+        .catch(err => console.warn('[Darsana] Gagal cek update:', err));
+    }
+
+    // Jalankan sekali segera untuk set baseline, lalu tiap 30 detik
+    checkForUpdates();
+    setInterval(checkForUpdates, 30000);
+})();
+</script>
 </x-app-layout>

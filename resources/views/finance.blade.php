@@ -498,8 +498,29 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             
             <div class="flex items-center gap-3" x-data="{ refreshing: false }">
+                {{-- Indikator Auto-Refresh (diperbarui otomatis oleh JS) --}}
+                <div class="hidden sm:flex items-center gap-2 bg-slate-100 px-4 py-2.5 rounded-full text-xs font-bold text-slate-600 border border-slate-200" title="Dashboard memantau data baru setiap 30 detik">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span>Terakhir diperbarui: <span id="darsana-last-update-time">{{ $financeLastUpdateTime }}</span></span>
+                </div>
+
                 {{-- Tombol utama: Refresh Data SAP (Primary) --}}
-                <form action="{{ route('finance.refresh') }}" method="POST" @submit="refreshing = true">
+                <form action="{{ route('finance.refresh') }}" method="POST" @submit.prevent="
+                    refreshing = true;
+                    fetch($el.action, {
+                        method: 'POST',
+                        body: new FormData($el),
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(res => {
+                        if (res.ok) { window.location.reload(); }
+                        else { refreshing = false; alert('Gagal refresh data SAP.'); }
+                    })
+                    .catch(err => { refreshing = false; alert('Error: ' + err); })
+                ">
                     @csrf
                     <button type="submit"
                         :disabled="refreshing"
@@ -944,4 +965,39 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </div>
 </div>
+
+<script>
+(function() {
+    // Simpan waktu import terakhir saat halaman pertama kali dimuat
+    let knownLastUpdate = @json($financeLog?->created_at?->toIso8601String());
+
+    function checkForUpdates() {
+        fetch('/dashboard/last-update', {
+            headers: { 'Accept': 'application/json' },
+            cache: 'no-store'
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.last_update) return; // belum ada import sama sekali
+
+            if (knownLastUpdate === null) {
+                // Halaman dimuat saat belum ada data, sekarang sudah ada → reload
+                window.location.reload();
+                return;
+            }
+
+            if (data.last_update !== knownLastUpdate) {
+                // Ada data baru → reload agar angka-angka dashboard ter-update
+                window.location.reload();
+            }
+            // Jika sama → tidak lakukan apa-apa (tidak kedip, tidak reload)
+        })
+        .catch(err => console.warn('[Darsana] Gagal cek update:', err));
+    }
+
+    // Polling setiap 30 detik
+    setInterval(checkForUpdates, 30000);
+})();
+</script>
+
 </x-app-layout>

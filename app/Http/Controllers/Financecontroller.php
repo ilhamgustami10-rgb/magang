@@ -89,13 +89,21 @@ class FinanceController extends Controller
         $activeFinanceFiles = \App\Models\FinanceUpload::latest()->pluck('file_name')->toArray();
         $financeUpdatedAt = $latestDate ? \Carbon\Carbon::parse($latestDate)->format('d M Y') : null;
 
-        return view('finance', compact(
+        $financeLog = \App\Models\ImportLog::latest('created_at')->first();
+        $financeLastUpdateTime = $financeLog ? $financeLog->created_at->setTimezone('Asia/Jakarta')->format('H:i \W\I\B') : '-';
+
+        return response()->view('finance', compact(
             'financeData', 
             'activeFinanceFiles', 
             'financeUpdatedAt',
+            'financeLog',
+            'financeLastUpdateTime',
             'sumRkap', 'sumRelease', 'sumCommit', 'sumConsume', 'sumAvail',
             'totalCabang'
-        ));
+        ))
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
     }
 
     public function import(Request $request, SapImportService $importService)
@@ -109,11 +117,11 @@ class FinanceController extends Controller
                 $request->file('file')->getRealPath(), 
                 $request->file('file')->getClientOriginalName()
             );
-            $count = $stats['rows_imported'];
+            $count = BudgetRealisasi::where('report_date', now()->format('Y-m-d'))->count();
             
-            return redirect()->back()->with('success', "{$count} baris Realisasi Anggaran berhasil diimpor dan langsung tampil di tab Finance.");
+            return redirect()->route('finance')->with('success', "{$count} baris Realisasi Anggaran berhasil diimpor dan langsung tampil di tab Finance.");
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', "Gagal mengimpor file: " . $e->getMessage());
+            return redirect()->route('finance')->with('error', "Gagal mengimpor file: " . $e->getMessage());
         }
     }
 
@@ -137,7 +145,10 @@ class FinanceController extends Controller
         $lock = Cache::lock('sap_refresh', 180);
 
         if (!$lock->get()) {
-            return redirect()->back()->with('error', 'Refresh sedang berjalan, tunggu sampai selesai.');
+            if (request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Refresh sedang berjalan, tunggu sampai selesai.'], 429);
+            }
+            return redirect()->route('finance')->with('error', 'Refresh sedang berjalan, tunggu sampai selesai.');
         }
 
         try {
@@ -159,7 +170,7 @@ class FinanceController extends Controller
 
             if (empty($botCommand)) {
                 Log::error('SAP Refresh: SAP_BOT_COMMAND tidak dikonfigurasi di .env');
-                return redirect()->back()->with('error', 'Konfigurasi bot SAP belum diatur. Hubungi administrator.');
+                return redirect()->route('finance')->with('error', 'Konfigurasi bot SAP belum diatur. Hubungi administrator.');
             }
 
             Log::info("SAP Refresh: Menjalankan bot — {$botCommand}");
@@ -176,7 +187,7 @@ class FinanceController extends Controller
                     'stdout' => $process->getOutput(),
                     'stderr' => $process->getErrorOutput(),
                 ]);
-                return redirect()->back()->with('error',
+                return redirect()->route('finance')->with('error',
                     'Bot tidak merespons dalam waktu yang ditentukan. Pastikan SAP terbuka, login, dan layar tidak terkunci.'
                 );
             }
@@ -206,14 +217,14 @@ class FinanceController extends Controller
             $newFile = $this->findNewestExportFile($exportDir);
 
             if (!$newFile) {
+                $errMsg = $exitCode !== 0 ? 'Belum ada data. Silakan login SAP lalu klik Refresh.' : 'Bot selesai tapi tidak ada file baru ditemukan di folder export.';
+                if (request()->ajax()) {
+                    return response()->json(['success' => false, 'message' => $errMsg], 400);
+                }
                 if ($exitCode !== 0) {
-                    return redirect()->back()->with('success',
-                        'Belum ada data. Silakan login SAP lalu klik Refresh.'
-                    );
+                    return redirect()->route('finance')->with('success', $errMsg);
                 } else {
-                    return redirect()->back()->with('error',
-                        'Bot selesai tapi tidak ada file baru ditemukan di folder export. Cek apakah SAP benar-benar mengekspor file.'
-                    );
+                    return redirect()->route('finance')->with('error', $errMsg);
                 }
             }
 
@@ -261,12 +272,18 @@ class FinanceController extends Controller
                     $msg = "Gagal ambil data baru dari SAP — menampilkan data terakhir dari folder: {$count} baris, {$totalCabang} cabang.";
                 }
                 
-                return redirect()->back()->with('success', $msg);
+                if (request()->ajax()) {
+                    return response()->json(['success' => true, 'message' => $msg]);
+                }
+                return redirect()->route('finance')->with('success', $msg);
             } else {
                 if (!$this->safeCopyFile($filePath, $failedPath . '/' . $fileName)) {
                     Log::warning("SAP Refresh: Data gagal diimpor dan gagal menyalin file ke failed. (Mungkin terkunci Excel)");
                 }
-                return redirect()->back()->with('error',
+                if (request()->ajax()) {
+                    return response()->json(['success' => false, 'message' => $errorMessage], 400);
+                }
+                return redirect()->route('finance')->with('error',
                     "File diterima dari SAP tapi gagal diproses: " . $errorMessage
                 );
             }
@@ -275,7 +292,10 @@ class FinanceController extends Controller
             Log::error('SAP Refresh: Error tidak terduga — ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine(), [
                 'trace' => $e->getTraceAsString(),
             ]);
-            return redirect()->back()->with('error',
+            if (request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Terjadi kesalahan sistem.'], 500);
+            }
+            return redirect()->route('finance')->with('error',
                 'Terjadi kesalahan saat refresh data SAP. Periksa log untuk detail.'
             );
         } finally {
