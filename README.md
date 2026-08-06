@@ -1,59 +1,290 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+
+📊 Finance Dashboard — Realisasi Anggaran AirNav Indonesia (Cabang Surabaya)
+Proyek magang (PKL) untuk membangun dashboard monitoring realisasi anggaran berbasis data laporan SAP (Budget/Fund Management) milik AirNav Indonesia Cabang Surabaya. Data mentah dari SAP diolah menjadi visualisasi interaktif agar realisasi anggaran per cabang & per Funds Center lebih mudah dipantau.
+
+🎯 Latar Belakang
+Laporan realisasi anggaran dari SAP masih berbentuk tabel/CSV yang panjang dan sulit dibaca. Proyek ini bertujuan:
+
+Mengubah data laporan SAP menjadi dashboard visual yang informatif.
+Memudahkan pemantauan serapan anggaran (berapa yang sudah terpakai vs sisa) per cabang.
+Menyajikan perbandingan antar Funds Center (item anggaran) secara cepat.
+✨ Fitur Dashboard
+Navigasi tab per cabang — Surabaya, Banyuwangi, Malang, Sumenep, dan Unit Bawean.
+5 KPI utama dalam satu baris: RKAP, Release Budget, Total Consume, Commitment, dan Available Budget (lengkap dengan persentasenya).
+Kartu Serapan Anggaran — persentase serapan (Total Consume / Release Budget) dengan progress bar.
+2 Donut chart "Komposisi per Item":
+Release vs Total Consume
+Consume vs Available Budget
+Dilengkapi filter single-select (radio) di dalam masing-masing kartu, angka persentase di tengah donut, dan skema 2 warna (biru tua / biru muda).
+Bar chart Konsumsi Tertinggi & Sisa Anggaran Tertinggi (12 item teratas).
+Tabel Detail Funds Center — dengan kolom serapan (progress bar berwarna), pencarian, dan sorting.
+Tampilan HD & responsif — render tajam di layar retina, tata letak menyesuaikan ukuran layar.
+🧮 Metrik yang Digunakan
+Dashboard fokus pada 5 metrik dari laporan SAP:
+
+Metrik	Keterangan
+RKAP	Rencana Kerja & Anggaran Perusahaan
+Release Budget	Anggaran yang sudah dirilis/dibuka
+Commitment	Anggaran yang sudah dikomitmenkan (mis. kontrak/PO)
+Total Consume	Realisasi anggaran yang sudah terpakai
+Available Budget	Sisa anggaran yang masih tersedia
+Rumus serapan: % Serapan = Total Consume / Release Budget × 100
+
+📈 Ringkasan Analisis Data (per 10 Sep 2025)
+Total keseluruhan (5 cabang, 33 item):
+
+Metrik	Nilai (Rp)
+RKAP	5.744.200.285
+Release Budget	14.275.060.605
+Commitment	1.255.010.566
+Total Consume	10.815.710.844
+Available Budget	3.459.349.761
+Serapan	± 75,8%
+Sebaran item per cabang:
+
+Cabang	Kode	Jumlah Item
+Cabang Surabaya	A022020000	31
+Cabang Pembantu Banyuwangi	A022020001	14
+Cabang Pembantu Malang	A022020002	11
+Cabang Pembantu Sumenep	A022020003	13
+Unit Bawean	A022020005	2
+Temuan singkat:
+
+Serapan anggaran keseluruhan berada di angka ±75,8%, artinya sebagian besar Release Budget sudah terealisasi.
+Masih tersisa ± Rp 3,46 miliar Available Budget yang belum terpakai.
+Cabang Surabaya memiliki item anggaran terbanyak (31 item) sehingga jadi kontributor utama realisasi.
+🛠️ Teknologi
+Laravel (Blade view) — kerangka aplikasi & penyaji data.
+Chart.js v4 — visualisasi chart (donut & bar).
+HTML + CSS custom — tampilan responsif.
+PHP 8.3, MySQL — backend & database.
+Data sumber: laporan SAP (Budget/Fund Management) dalam format CSV/Excel.
+🗂️ Struktur Data
+Data dikirim dari controller ke Blade sebagai JSON. Struktur tiap cabang:
+
+{
+  "code": "A022020000",
+  "name": "Cabang Surabaya",
+  "rkap": 0, "release": 0, "commitment": 0, "consume": 0, "available": 0,
+  "items": [
+    { "code": "...", "name": "...", "rkap": 0, "release": 0, "commitment": 0, "consume": 0, "available": 0 }
+  ]
+}
+🚀 Cara Menjalankan
+# 1. Clone repo
+git clone https://github.com/ilhamgustami10-rgb/magang.git
+cd magang
+
+# 2. Install dependency
+composer install
+npm install
+
+# 3. Siapkan environment
+cp .env.example .env
+php artisan key:generate
+# sesuaikan konfigurasi database di file .env
+
+# 4. Migrasi database
+php artisan migrate
+
+# 5. Jalankan aplikasi
+php artisan serve
+npm run dev
+Buka http://127.0.0.1:8000 di browser.
+
+Catatan: dashboard membutuhkan koneksi internet untuk memuat Chart.js dari CDN (jika belum di-bundle lokal).
+
+📌 Sumber Data (SAP)
+Data diambil dari laporan drilldown Budget/Fund Management SAP dengan parameter:
+
+Area: 1000
+Budget Category: 9F
+Version: 0
+Fiscal Year: 2026
+Period: 1–12
+Funds Center: A022020000 – A022020005
+👥 Kontributor
+Proyek magang / Praktik Kerja Lapangan (PKL) — AirNav Indonesia Cabang Surabaya.
+=======
+<h1 align="center">📊 Finance Dashboard — Realisasi Anggaran AirNav Indonesia</h1>
+<p align="center">Dashboard monitoring realisasi anggaran <b>Cabang Surabaya</b> berbasis data laporan <b>SAP (Budget/Fund Management)</b>.</p>
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img alt="Laravel" src="https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white">
+  <img alt="PHP" src="https://img.shields.io/badge/PHP_8.3-777BB4?style=for-the-badge&logo=php&logoColor=white">
+  <img alt="Chart.js" src="https://img.shields.io/badge/Chart.js_v4-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white">
+  <img alt="MySQL" src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white">
+  <img alt="Status" src="https://img.shields.io/badge/status-magang%2FPKL-success?style=for-the-badge">
 </p>
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 📌 Daftar Isi
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- [Latar Belakang](#-latar-belakang)
+- [Fitur Dashboard](#-fitur-dashboard)
+- [Metrik yang Digunakan](#-metrik-yang-digunakan)
+- [Ringkasan Analisis Data](#-ringkasan-analisis-data-per-10-sep-2025)
+- [Teknologi](#️-teknologi)
+- [Struktur Data](#️-struktur-data)
+- [Cara Menjalankan](#-cara-menjalankan)
+- [Sumber Data (SAP)](#-sumber-data-sap)
+- [Kontributor](#-kontributor)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 🎯 Latar Belakang
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Laporan realisasi anggaran dari SAP masih berbentuk tabel/CSV yang panjang dan sulit dibaca. Proyek ini bertujuan:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Mengubah data laporan SAP menjadi **dashboard visual** yang informatif.
+- Memudahkan pemantauan **serapan anggaran** (terpakai vs sisa) per cabang.
+- Menyajikan perbandingan antar *Funds Center* (item anggaran) secara cepat.
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## ✨ Fitur Dashboard
 
-### Premium Partners
+- 🗂️ **Navigasi tab per cabang** — Surabaya, Banyuwangi, Malang, Sumenep, dan Unit Bawean.
+- 📇 **5 KPI utama** dalam satu baris: RKAP, Release Budget, Total Consume, Commitment, dan Available Budget (lengkap dengan persentasenya).
+- 📈 **Kartu Serapan Anggaran** — persentase serapan (Total Consume / Release Budget) dengan progress bar.
+- 🍩 **2 Donut chart "Komposisi per Item"**:
+  - *Release vs Total Consume*
+  - *Consume vs Available Budget*
+  - Dilengkapi **filter single-select** (radio) di dalam masing-masing kartu, angka persentase di tengah donut, dan skema 2 warna (biru tua / biru muda).
+- 📊 **Bar chart Konsumsi Tertinggi & Sisa Anggaran Tertinggi** (12 item teratas).
+- 📋 **Tabel Detail Funds Center** — kolom serapan (progress bar berwarna), pencarian, dan sorting.
+- 🖥️ **Tampilan HD & responsif** — render tajam di layar retina, tata letak menyesuaikan ukuran layar.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+## 🧮 Metrik yang Digunakan
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Dashboard fokus pada **5 metrik** dari laporan SAP:
 
-## Code of Conduct
+| Metrik | Keterangan |
+|---|---|
+| **RKAP** | Rencana Kerja & Anggaran Perusahaan |
+| **Release Budget** | Anggaran yang sudah dirilis/dibuka |
+| **Commitment** | Anggaran yang sudah dikomitmenkan (mis. kontrak/PO) |
+| **Total Consume** | Realisasi anggaran yang sudah terpakai |
+| **Available Budget** | Sisa anggaran yang masih tersedia |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+> **Rumus serapan:** `% Serapan = Total Consume / Release Budget × 100`
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 📈 Ringkasan Analisis Data (per 10 Sep 2025)
 
-## License
+**Total keseluruhan (5 cabang, 33 item):**
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Metrik | Nilai (Rp) |
+|---|---:|
+| RKAP | 5.744.200.285 |
+| Release Budget | 14.275.060.605 |
+| Commitment | 1.255.010.566 |
+| Total Consume | 10.815.710.844 |
+| Available Budget | 3.459.349.761 |
+| **Serapan** | **± 75,8%** |
+
+**Sebaran item per cabang:**
+
+| Cabang | Kode | Jumlah Item |
+|---|---|:---:|
+| Cabang Surabaya | A022020000 | 31 |
+| Cabang Pembantu Banyuwangi | A022020001 | 14 |
+| Cabang Pembantu Malang | A022020002 | 11 |
+| Cabang Pembantu Sumenep | A022020003 | 13 |
+| Unit Bawean | A022020005 | 2 |
+
+**Temuan singkat:**
+
+- Serapan anggaran keseluruhan berada di angka **±75,8%**, artinya sebagian besar Release Budget sudah terealisasi.
+- Masih tersisa **± Rp 3,46 miliar** Available Budget yang belum terpakai.
+- Cabang Surabaya memiliki item anggaran terbanyak (31 item) sehingga jadi kontributor utama realisasi.
+
+---
+
+## 🛠️ Teknologi
+
+| Kategori | Teknologi |
+|---|---|
+| Framework | Laravel (Blade view) |
+| Visualisasi | Chart.js v4 (donut & bar) |
+| Bahasa | PHP 8.3 |
+| Database | MySQL |
+| Tampilan | HTML + CSS custom (responsif) |
+| Sumber data | Laporan SAP (Budget/Fund Management) format CSV/Excel |
+
+---
+
+## 🗂️ Struktur Data
+
+Data dikirim dari controller ke Blade sebagai JSON. Struktur tiap cabang:
+
+```json
+{
+  "code": "A022020000",
+  "name": "Cabang Surabaya",
+  "rkap": 0, "release": 0, "commitment": 0, "consume": 0, "available": 0,
+  "items": [
+    { "code": "...", "name": "...", "rkap": 0, "release": 0, "commitment": 0, "consume": 0, "available": 0 }
+  ]
+}
+```
+
+---
+
+## 🚀 Cara Menjalankan
+
+```bash
+# 1. Clone repo
+git clone https://github.com/ilhamgustami10-rgb/magang.git
+cd magang
+
+# 2. Install dependency
+composer install
+npm install
+
+# 3. Siapkan environment
+cp .env.example .env
+php artisan key:generate
+# sesuaikan konfigurasi database di file .env
+
+# 4. Migrasi database
+php artisan migrate
+
+# 5. Jalankan aplikasi
+php artisan serve
+npm run dev
+```
+
+Buka `http://127.0.0.1:8000` di browser.
+
+> 💡 Dashboard memuat Chart.js dari CDN, jadi butuh koneksi internet (kecuali sudah di-bundle lokal).
+
+---
+
+## 📌 Sumber Data (SAP)
+
+Data diambil dari laporan drilldown **Budget/Fund Management** SAP dengan parameter:
+
+| Parameter | Nilai |
+|---|---|
+| Area | `1000` |
+| Budget Category | `9F` |
+| Version | `0` |
+| Fiscal Year | `2026` |
+| Period | `1–12` |
+| Funds Center | `A022020000` – `A022020005` |
+
+---
+
+## 👥 Kontributor
+
+Proyek magang / Praktik Kerja Lapangan (PKL) — **AirNav Indonesia Cabang Surabaya**.
+
+---
+
+<p align="center"><sub>README ini dibuat sebagai dokumentasi proyek magang. Silakan sesuaikan bagian kontributor, tahun anggaran, dan konfigurasi sesuai kebutuhan.</sub></p>
+>>>>>>> f322549 (tambah README dokumentasi proyek)

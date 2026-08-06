@@ -10,11 +10,32 @@ use App\Models\EnrouteData;
 use App\Models\TerminalUpload;
 use App\Models\TerminalData;
 use App\Models\Airline;
+use App\Models\FinanceData;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    public function adminOverview()
+    {
+        $sources = [
+            ['label' => 'Master Airline', 'records' => Airline::count(), 'uploads' => null, 'route' => 'admin.airlines.index'],
+            ['label' => 'Traffic Movement', 'records' => TrafficData::count(), 'uploads' => TrafficUpload::count(), 'route' => 'admin.traffic.index'],
+            ['label' => 'Enroute', 'records' => EnrouteData::count(), 'uploads' => EnrouteUpload::count(), 'route' => 'admin.enroutes.index'],
+            ['label' => 'Terminal', 'records' => TerminalData::count(), 'uploads' => TerminalUpload::count(), 'route' => 'admin.terminals.index'],
+            ['label' => 'Finance', 'records' => \App\Models\BudgetRealisasi::count(), 'uploads' => \App\Models\FinanceUpload::count(), 'route' => 'admin.finances.index'],
+        ];
+
+        return view('admin.dashboard', [
+            'sources' => $sources,
+            'totalRecords' => collect($sources)->sum('records'),
+            'lastInputAt' => collect([
+                TrafficData::max('updated_at'), EnrouteData::max('updated_at'),
+                TerminalData::max('updated_at'), \App\Models\BudgetRealisasi::max('updated_at'), Airline::max('updated_at'),
+            ])->filter()->max(),
+        ]);
+    }
+
     public function index()
     {
         // ============================================
@@ -472,10 +493,21 @@ class DashboardController extends Controller
                 ];
             });
 
+        // Period Terminal
+        $latestDatetraffic = TrafficData::max('tanggal');
+        $periodtraffic = $latestDatetraffic ? Carbon::parse($latestDatetraffic)->format('d M Y') : 'Aug 2026';
+
+        $activeTrafficFiles = TrafficUpload::latest('tanggal_jam')->pluck('file_name')->toArray();
+        $activeEnrouteFiles = EnrouteUpload::latest('tanggal_jam')->pluck('file_name')->toArray();
+        $activeTerminalFiles = TerminalUpload::latest('tanggal_jam')->pluck('file_name')->toArray();
+
         // ============================================
         // PASS KE VIEW
         // ============================================
         return view('traffic', compact(
+            'activeTrafficFiles',
+            'activeEnrouteFiles',
+            'activeTerminalFiles',
             // Enroute
             'enrouteMovement',
             'totalRouteUnit',
@@ -533,7 +565,8 @@ class DashboardController extends Controller
             'trafficPeakHeights',
             'trafficPeakStart',
             'trafficPeakEnd',
-            'trafficHourlyTraffic'
+            'trafficHourlyTraffic',
+            'periodtraffic'
         ));
     }
     
