@@ -9,4 +9,8 @@ return [
     'bot_command'  => env('SAP_BOT_COMMAND', 'C:\Windows\System32\cscript.exe //nologo "D:/PKL Project/Darsana/bot/export_sap.vbs"'),
     'bot_timeout'  => (int) env('SAP_BOT_TIMEOUT', 150),
     'bot_dryrun'   => env('DARSANA_BOT_DRYRUN', 0),
+    'config_ini_path' => env('SAP_CONFIG_INI_PATH', 'D:\\PKL Project\\Darsana\\bot\\config_sap.ini'),
+    'task_name'    => env('SAP_TASK_NAME', 'Darsana Export'),
+    'schtasks_path' => env('SAP_SCHTASKS_PATH', 'C:\\Windows\\System32\\schtasks.exe'),
+    'powershell_path' => env('SAP_POWERSHELL_PATH', 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'),
 ];

@@ -2,27 +2,55 @@
 ' DARSANA - Export Realisasi Anggaran dari SAP ke folder
 ' Mode  : PINTAR -> pakai sesi yang sudah login; jika tidak ada, AUTO-LOGIN sendiri
 ' Syarat: PC nyala, layar TIDAK terkunci, aplikasi SAP Logon terbuka
-'         (untuk auto-login: isi bagian PENGATURAN AUTO-LOGIN di bawah)
+'
+' >>> PENTING <<<
+' Pengaturan (user, password, folder, dll) TIDAK lagi ditulis di file ini.
+' Semua nilai dibaca dari file : config_sap.ini
+' Letakkan config_sap.ini di FOLDER YANG SAMA dengan script ini.
+' File itu bisa diubah lewat halaman Settings di dashboard DARSANA.
+'
 ' Jalankan: cscript //nologo export_sap.vbs
 '================================================================
 
-'---------- PENGATURAN (boleh diubah) ----------
-Dim exportFolder, filePrefix, reportTx, fmArea
-exportFolder = "D:\Sap_export"      ' folder tujuan file
-filePrefix   = "realisasi_"          ' awalan nama file
-reportTx     = "ZFM001"              ' kode transaksi laporan (Budget Usage)
-fmArea       = "1000"                ' Financial Management Area (ctxt$4FFIKRS)
+'---------- Siapkan FileSystemObject + temukan lokasi config ----------
+Dim fso, scriptFolder, configPath
+Set fso = CreateObject("Scripting.FileSystemObject")
+scriptFolder = fso.GetParentFolderName(WScript.ScriptFullName)
+configPath   = scriptFolder & "\config_sap.ini"
 
-'---------- PENGATURAN AUTO-LOGIN (ISI SENDIRI DI SERVER LOKAL) ----------
-' Dipakai HANYA jika belum ada sesi SAP yang login (mode auto-login).
-' Jika sudah ada yang login, skrip memakai sesi itu & nilai di bawah DIABAIKAN.
+If Not fso.FileExists(configPath) Then
+    WScript.Echo "GAGAL 0: file pengaturan tidak ditemukan: " & configPath
+    WScript.Echo "         Buat config_sap.ini di folder yang sama, atau simpan lewat halaman Settings dashboard."
+    WScript.Quit 4
+End If
+
+'---------- Baca semua nilai dari config_sap.ini ----------
+Dim cfg
+Set cfg = BacaConfig(configPath)
+
+Dim exportFolder, filePrefix, reportTx, fmArea
 Dim sapSystem, sapClient, sapUser, sapPass, sapLang, logoutAfter
-sapSystem   = "INTERNET PROD - AEP" ' <-- dari SAP Logon (kolom Name)
-sapClient   = "300"                ' <-- dari recording-mu (client 300)
-sapUser     = "A022C05074"          ' <-- dari recording-mu (user SAP)
-sapPass     = "13Maret2026"       ' <-- password (AMANKAN file ini!)
-sapLang     = "EN"                  ' <-- sesuai layar login (EN)
-logoutAfter = True                  ' <-- True: logout otomatis setelah export (jika bot yang login)
+Dim ficLow, ficHigh
+
+exportFolder = Ambil(cfg, "exportFolder", "D:\Sap_export")
+filePrefix   = Ambil(cfg, "filePrefix", "realisasi_")
+reportTx     = Ambil(cfg, "reportTx", "ZFM001")
+fmArea       = Ambil(cfg, "fmArea", "1000")
+sapSystem    = Ambil(cfg, "sapSystem", "")
+sapClient    = Ambil(cfg, "sapClient", "")
+sapUser      = Ambil(cfg, "sapUser", "")
+sapPass      = Ambil(cfg, "sapPass", "")
+sapLang      = Ambil(cfg, "sapLang", "EN")
+logoutAfter  = (LCase(Ambil(cfg, "logoutAfter", "True")) = "true")
+ficLow       = Ambil(cfg, "fundCenterLow", "A022020000")
+ficHigh      = Ambil(cfg, "fundCenterHigh", "A022020005")
+
+'---------- Validasi pengaturan wajib ----------
+If sapSystem = "" Or sapClient = "" Or sapUser = "" Or sapPass = "" Then
+    WScript.Echo "GAGAL 0: pengaturan belum lengkap di config_sap.ini."
+    WScript.Echo "         Wajib diisi: sapSystem, sapClient, sapUser, sapPass."
+    WScript.Quit 4
+End If
 
 '---------- Buat nama file otomatis bertanggal ----------
 ' Contoh hasil: D:\Sap_export\realisasi_20260731_1003.csv
@@ -83,6 +111,16 @@ If session Is Nothing Then
 End If
 Err.Clear
 
+'---------- Cek: masih di layar login? berarti login GAGAL (user/pass/client salah) ----------
+Dim masihLogin
+masihLogin = False
+If Not (session.findById("wnd[0]/usr/txtRSYST-BNAME", False) Is Nothing) Then masihLogin = True
+Err.Clear
+If masihLogin Then
+    WScript.Echo "GAGAL 1: masih di layar login SAP -> kemungkinan username / password / client salah. Cek pengaturan di halaman Settings."
+    WScript.Quit 1
+End If
+
 '---------- Mulai otomasi ----------
 session.findById("wnd[0]").maximize
 
@@ -90,23 +128,23 @@ session.findById("wnd[0]").maximize
 session.findById("wnd[0]/tbar[0]/okcd").text = "/n" & reportTx
 session.findById("wnd[0]").sendVKey 0
 If Err.Number <> 0 Then
-    WScript.Echo "GAGAL: tidak bisa membuka transaksi " & reportTx & ". Cek kode transaksinya."
+    WScript.Echo "GAGAL 2: tidak bisa membuka transaksi " & reportTx & ". Cek kode transaksinya."
     WScript.Quit 2
 End If
 Err.Clear
 
 ' 2) Layar seleksi (pass 1): isi FM Area + Fund Center, lalu Execute (F8)
 session.findById("wnd[0]/usr/ctxt$4FFIKRS").text = fmArea
-session.findById("wnd[0]/usr/ctxt_4FFICTR-LOW").text  = "A022020000"
-session.findById("wnd[0]/usr/ctxt_4FFICTR-HIGH").text = "A022020005"
+session.findById("wnd[0]/usr/ctxt_4FFICTR-LOW").text  = ficLow
+session.findById("wnd[0]/usr/ctxt_4FFICTR-HIGH").text = ficHigh
 session.findById("wnd[0]/usr/ctxt_4FFICTR-HIGH").setFocus
 session.findById("wnd[0]/usr/ctxt_4FFICTR-HIGH").caretPosition = 10
 session.findById("wnd[0]").sendVKey 8
 
 ' 3) Layar seleksi (pass 2): isi ulang FM Area + Fund Center
 session.findById("wnd[0]/usr/ctxt$4FFIKRS").text = fmArea
-session.findById("wnd[0]/usr/ctxt_4FFICTR-LOW").text  = "A022020000"
-session.findById("wnd[0]/usr/ctxt_4FFICTR-HIGH").text = "A022020005"
+session.findById("wnd[0]/usr/ctxt_4FFICTR-LOW").text  = ficLow
+session.findById("wnd[0]/usr/ctxt_4FFICTR-HIGH").text = ficHigh
 session.findById("wnd[0]/usr/ctxt_4FFICTR-HIGH").setFocus
 session.findById("wnd[0]/usr/ctxt_4FFICTR-HIGH").caretPosition = 10
 
@@ -128,8 +166,17 @@ session.findById("wnd[1]/tbar[0]/btn[0]").press
 ' 7) Konfirmasi popup bila muncul (aman walau popup tidak ada)
 session.findById("wnd[2]/usr/btnSPOP-VAROPTION2").press
 session.findById("wnd[1]/usr/btnSPOP-VAROPTION1").press
+Err.Clear
 
-'---------- Logout otomatis (HANYA jika BOT yang login) ----------
+'---------- Verifikasi file BENAR-BENAR ada sebelum lapor sukses ----------
+WScript.Sleep 1500   ' beri waktu SAP menuliskan file ke disk
+If Not fso.FileExists(fullPath) Then
+    WScript.Echo "GAGAL 3: proses selesai tetapi file TIDAK ditemukan di " & fullPath
+    WScript.Echo "         Kemungkinan: kredensial salah, masih di layar login, atau export dibatalkan."
+    WScript.Quit 3
+End If
+
+'---------- Logout otomatis (HANYA jika BOT yang login & export sukses) ----------
 ' Kalau tadi menempel ke sesi orang lain, TIDAK di-logout (biar tidak mengganggu user).
 If botLoggedIn And logoutAfter Then
     session.findById("wnd[0]/tbar[0]/okcd").text = "/nex"
@@ -144,3 +191,39 @@ End If
 '---------- Selesai ----------
 WScript.Echo "SUKSES: file tersimpan di " & fullPath
 WScript.Quit 0
+
+'================================================================
+' FUNGSI BANTU
+'================================================================
+Function BacaConfig(path)
+    Dim f, baris, pos, k, v, dict
+    Set dict = CreateObject("Scripting.Dictionary")
+    dict.CompareMode = 1   ' TextCompare -> nama kunci tidak case-sensitive
+    Set f = fso.OpenTextFile(path, 1, False)   ' 1 = ForReading
+    Do Until f.AtEndOfStream
+        baris = Trim(f.ReadLine)
+        ' lewati baris kosong, komentar (; atau #), dan header seksi [..]
+        If baris <> "" And Left(baris,1) <> ";" And Left(baris,1) <> "#" And Left(baris,1) <> "[" Then
+            pos = InStr(baris, "=")
+            If pos > 0 Then
+                k = Trim(Left(baris, pos - 1))
+                v = Trim(Mid(baris, pos + 1))
+                If dict.Exists(k) Then
+                    dict(k) = v
+                Else
+                    dict.Add k, v
+                End If
+            End If
+        End If
+    Loop
+    f.Close
+    Set BacaConfig = dict
+End Function
+
+Function Ambil(dict, key, standar)
+    If dict.Exists(key) Then
+        Ambil = dict(key)
+    Else
+        Ambil = standar
+    End If
+End Function

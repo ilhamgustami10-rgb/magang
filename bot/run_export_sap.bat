@@ -11,6 +11,13 @@ set PHP=php
 
 set LOG=D:\PKL Project\Darsana\bot\log_bot.txt
 
+REM ---------- LANGKAH 0: Cek Jam Eksekusi ----------
+%PHP% "D:\PKL Project\Darsana\bot\check_time.php"
+if not "%errorlevel%"=="0" (
+    REM Bukan waktunya, langsung keluar secara diam-diam
+    exit /b 0
+)
+
 echo ================================================== >> "%LOG%"
 echo [%date% %time%] LANGKAH 1 - Mulai export SAP >> "%LOG%"
 

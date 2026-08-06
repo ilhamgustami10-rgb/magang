@@ -67,6 +67,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Volt::route('finances', 'admin.finances.index')->name('finances.index');
 
+        Route::get('sap-settings', [\App\Http\Controllers\Admin\SapSettingsController::class, 'index'])->name('sap-settings.index');
+        Route::post('sap-settings', [\App\Http\Controllers\Admin\SapSettingsController::class, 'update'])->name('sap-settings.update');
+        Route::get('sap-settings/browse-folder', [\App\Http\Controllers\Admin\SapSettingsController::class, 'browseFolder'])->name('sap-settings.browse');
+
     });
 
     // 3. User Profile Management
