@@ -4,24 +4,23 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Services\SapConfigService;
 use Illuminate\Support\Facades\Process;
 
 class SapSettingsController extends Controller
 {
-    public function index()
+    public function index(SapConfigService $sapConfigService)
     {
-        $iniPath = config('sap.config_ini_path');
-        
         $settings = [
             'sapUser' => '',
             'exportFolder' => '',
         ];
 
-        if (file_exists($iniPath)) {
-            $parsedIni = parse_ini_file($iniPath, true);
-            $settings['sapUser'] = $parsedIni['SAP']['sapUser'] ?? '';
-            $settings['exportFolder'] = $parsedIni['Export']['exportFolder'] ?? '';
-        }
+        $sapConfigService->ensureExists();
+        $parsedIni = $sapConfigService->read();
+
+        $settings['sapUser'] = $parsedIni['SAP']['sapUser'] ?? '';
+        $settings['exportFolder'] = $parsedIni['Export']['exportFolder'] ?? '';
 
         // Ambil scheduleTime dari INI
         $scheduleTime = $parsedIni['SAP']['ScheduleTime'] ?? '';
@@ -85,7 +84,7 @@ class SapSettingsController extends Controller
         ]);
     }
 
-    public function update(Request $request)
+    public function update(Request $request, SapConfigService $sapConfigService)
     {
         $request->validate([
             'sapUser' => 'required|string',
@@ -106,14 +105,12 @@ class SapSettingsController extends Controller
             return back()->with('error', 'Folder Export tidak bisa ditulis (Permission Denied): ' . $folder);
         }
 
-        $iniPath = config('sap.config_ini_path');
-        
-        if (!file_exists($iniPath)) {
-            return back()->with('error', 'File konfigurasi SAP tidak ditemukan: ' . $iniPath);
+        if (!$sapConfigService->isWritable()) {
+            return back()->with('error', 'Folder / File konfigurasi SAP tidak bisa ditulis (Permission Denied): ' . dirname($sapConfigService->getPath()) . '. Pastikan folder memiliki izin tulis.');
         }
 
-        // Parse existing INI
-        $parsedIni = parse_ini_file($iniPath, true);
+        $sapConfigService->ensureExists();
+        $parsedIni = $sapConfigService->read();
 
         // Update values
         $parsedIni['SAP']['sapUser'] = $request->sapUser;
@@ -132,26 +129,8 @@ class SapSettingsController extends Controller
         $parsedIni['Export']['exportFolder'] = $folder;
 
         // Write INI back
-        $this->writeIniFile($parsedIni, $iniPath);
+        $sapConfigService->write($parsedIni);
 
         return back()->with('success', 'Pengaturan Bot SAP berhasil disimpan. Jadwal eksekusi ditetapkan pukul ' . $scheduleTime . ' WIB.');
-    }
-
-    private function writeIniFile($data, $filepath)
-    {
-        $content = "";
-        foreach ($data as $section => $values) {
-            $content .= "[$section]\r\n";
-            foreach ($values as $key => $val) {
-                // Keep values without quotes
-                $content .= "$key=$val\r\n";
-            }
-            $content .= "\r\n";
-        }
-        
-        // Remove trailing empty line for exact format preservation
-        $content = rtrim($content) . "\r\n";
-        
-        file_put_contents($filepath, $content);
     }
 }

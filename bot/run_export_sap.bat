@@ -29,8 +29,17 @@ echo [%date% %time%] LANGKAH 1 - Mulai export SAP >> "%LOG%"
 
 REM ---------- LANGKAH 1: export dari SAP ----------
 cd /d "%BOT_DIR%"
+
+REM Jalankan Watcher AutoIt
+start "" "%BOT_DIR%\sap_security_watcher.exe"
+timeout /t 2 /nobreak >nul
+
 "C:\Windows\System32\cscript.exe" //nologo "%BOT_DIR%\export_sap.vbs" >> "%LOG%" 2>&1
 set EXPORT_CODE=%errorlevel%
+
+REM Matikan Watcher AutoIt
+taskkill /IM sap_security_watcher.exe /F >nul 2>&1
+
 echo [%date% %time%] Export selesai - exit code %EXPORT_CODE% >> "%LOG%"
 
 REM Kalau export gagal, lewati impor
