@@ -118,12 +118,11 @@ class SapSettingsController extends Controller
         ]);
 
         $folder = $request->exportFolder;
-        if (!is_dir($folder)) {
-            return back()->with('error', 'Folder Export tidak valid atau tidak ditemukan: ' . $folder . '. Silakan buat folder terlebih dahulu.');
-        }
-        if (!is_writable($folder)) {
-            return back()->with('error', 'Folder Export tidak bisa ditulis (Permission Denied): ' . $folder);
-        }
+        
+        // HAPUS VALIDASI is_dir dan is_writable di sisi PHP
+        // Karena jika di-hosting di server yang berbeda (atau dibatasi open_basedir), 
+        // PHP tidak bisa mengecek folder lokal PC Windows.
+        // Validasi ketersediaan folder akan diserahkan sepenuhnya ke script VBS/Bot saat berjalan.
 
         if (!$sapConfigService->isWritable()) {
             return back()->with('error', 'Folder / File konfigurasi SAP tidak bisa ditulis (Permission Denied): ' . dirname($sapConfigService->getPath()) . '. Pastikan folder memiliki izin tulis.');

@@ -92,6 +92,9 @@
                             Test Folder
                         </button>
                     </div>
+                    <p class="text-xs text-slate-500 mt-2">
+                        💡 <b>Tips Hosting:</b> Jika Anda menggunakan server Cloud/Hosting, tombol Pilih Folder tidak dapat menelusuri komputer lokal Anda. <b>Ketikkan jalurnya secara manual</b> di kolom atas (contoh: <code class="bg-slate-100 text-pink-600 px-1 py-0.5 rounded">D:\Sap_export</code>).
+                    </p>
                     <p class="text-xs text-slate-500">Folder di komputer/server tempat bot menyimpan file CSV hasil tarikan SAP.</p>
                     @error('exportFolder') <p class="text-xs text-red-600 font-bold mt-1">{{ $message }}</p> @enderror
                     <p id="folderStatus" class="text-xs font-bold mt-2 hidden px-3 py-2 rounded-xl"></p>
@@ -293,14 +296,14 @@
             statusEl.className = 'text-xs font-bold mt-2 block px-3 py-2 rounded-xl bg-slate-50 text-slate-500 border border-slate-200 animate-pulse';
 
             // Gunakan endpoint browse untuk tes keberadaan
-            fetch(`{{ route('admin.sap-settings.browse') }}?path=${encodeURIComponent(folder)}`)
+            fetch(`{{ route('admin.sap-settings.browse', [], false) }}?path=${encodeURIComponent(folder)}`)
                 .then(res => {
                     if (res.ok) {
-                        statusEl.innerHTML = '<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Folder siap digunakan (Valid & Writable).</span>';
+                        statusEl.innerHTML = '<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Folder terdeteksi di server ini (Valid).</span>';
                         statusEl.className = 'text-xs font-bold mt-2 block px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100';
                     } else {
-                        statusEl.innerHTML = '<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Folder tidak ditemukan atau akses ditolak. Pastikan folder tersebut benar-benar ada di server.</span>';
-                        statusEl.className = 'text-xs font-bold mt-2 block px-3 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100';
+                        statusEl.innerHTML = '<span class="flex items-center gap-1"><svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Server tidak dapat mendeteksi folder ini. Jika Anda yakin ini adalah folder di PC Lokal Anda, silakan abaikan pesan ini dan tekan Simpan.</span>';
+                        statusEl.className = 'text-xs font-bold mt-2 block px-3 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-100';
                     }
                 }).catch(() => {
                     statusEl.innerText = 'Gagal mengecek folder.';
