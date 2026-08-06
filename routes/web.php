@@ -81,4 +81,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
+// Rute API Khusus untuk Jembatan Sinkronisasi Bot Lokal
+Route::get('/api/sap-config', [\App\Http\Controllers\Admin\SapSettingsController::class, 'getConfigApi'])->name('api.sap-config');
+
 require __DIR__.'/auth.php';

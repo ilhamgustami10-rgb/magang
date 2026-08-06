@@ -152,4 +152,23 @@ class SapSettingsController extends Controller
 
         return back()->with('success', 'Pengaturan Bot SAP berhasil disimpan. Jadwal eksekusi ditetapkan pukul ' . $scheduleTime . ' WIB.');
     }
+
+    /**
+     * API Endpoint untuk menjembatani server cPanel dengan PC Lokal Windows
+     * Endpoint ini akan memuntahkan config terbaru dalam format JSON
+     */
+    public function getConfigApi(SapConfigService $sapConfigService)
+    {
+        $settings = $sapConfigService->readConfig();
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'sapUser' => $settings['sapUser'] ?? '',
+                'sapPass' => $settings['sapPass'] ?? '',
+                'exportFolder' => $settings['exportFolder'] ?? '',
+                'hour' => $settings['hour'] ?? '',
+                'minute' => $settings['minute'] ?? '',
+            ]
+        ]);
+    }
 }
