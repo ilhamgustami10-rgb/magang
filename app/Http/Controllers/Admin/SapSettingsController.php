@@ -44,6 +44,25 @@ class SapSettingsController extends Controller
     {
         $path = $request->get('path', 'C:\\');
         
+        // Mode khusus untuk melihat daftar Drive (Windows)
+        if ($path === 'DRIVES') {
+            $directories = [];
+            foreach (range('A', 'Z') as $letter) {
+                $drive = $letter . ':\\';
+                if (is_dir($drive)) {
+                    $directories[] = [
+                        'name' => 'Local Disk (' . $letter . ':)',
+                        'path' => $drive
+                    ];
+                }
+            }
+            return response()->json([
+                'current_path' => 'My Computer',
+                'parent_path' => null, // Paling atas
+                'directories' => $directories
+            ]);
+        }
+
         // Hapus backslash di akhir agar seragam, kecuali untuk root drive seperti C:\
         $path = rtrim($path, '\\/');
         if (preg_match('/^[A-Z]:$/i', $path)) {
@@ -73,8 +92,9 @@ class SapSettingsController extends Controller
 
         // Parent path logic
         $parentPath = dirname($path);
+        // Jika sudah di root drive (misal C:\), parent-nya adalah 'DRIVES'
         if ($parentPath === $path || $path === '') {
-            $parentPath = null;
+            $parentPath = 'DRIVES';
         }
 
         return response()->json([
