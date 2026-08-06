@@ -214,8 +214,8 @@
         let currentLoadedPath = '';
 
         function openFolderModal() {
+            let initialPath = document.getElementById('exportFolder').value || 'DRIVES';
             document.getElementById('folderModal').classList.remove('hidden');
-            let initialPath = document.getElementById('exportFolder').value || 'C:\\';
             loadFolder(initialPath);
         }
 
@@ -232,9 +232,9 @@
                 .then(data => {
                     if (data.error) {
                         listEl.innerHTML = `<div class="p-6 text-center text-red-500 font-bold bg-red-50 rounded-xl m-2 border border-red-100">${data.error}</div>`;
-                        // Coba load C:\ sebagai fallback jika error
-                        if (path !== 'C:\\') {
-                            setTimeout(() => loadFolder('C:\\'), 1500);
+                        // Coba load DRIVES sebagai fallback jika error
+                        if (path !== 'DRIVES') {
+                            setTimeout(() => loadFolder('DRIVES'), 1500);
                         }
                         return;
                     }

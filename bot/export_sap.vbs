@@ -170,22 +170,17 @@ Err.Clear
 
 '---------- Verifikasi file BENAR-BENAR ada sebelum lapor sukses ----------
 WScript.Sleep 1500   ' beri waktu SAP menuliskan file ke disk
-If Not fso.FileExists(fullPath) Then
-    WScript.Echo "GAGAL 3: proses selesai tetapi file TIDAK ditemukan di " & fullPath
-    WScript.Echo "         Kemungkinan: kredensial salah, masih di layar login, atau export dibatalkan."
-    WScript.Quit 3
+Dim exportBerhasil
+exportBerhasil = VerifyExport(fullPath, fso)
+
+If Not exportBerhasil Then
+    WScript.Echo "GAGAL 1: proses selesai tetapi file CSV kosong atau tidak ditemukan di " & fullPath
+    WScript.Quit 1
 End If
 
 '---------- Logout otomatis (HANYA jika BOT yang login & export sukses) ----------
-' Kalau tadi menempel ke sesi orang lain, TIDAK di-logout (biar tidak mengganggu user).
 If botLoggedIn And logoutAfter Then
-    session.findById("wnd[0]/tbar[0]/okcd").text = "/nex"
-    session.findById("wnd[0]").sendVKey 0
-    ' konfirmasi popup logoff bila muncul (aman walau tidak ada)
-    If Not (session.findById("wnd[1]", False) Is Nothing) Then
-        session.findById("wnd[1]/usr/btnSPOP-OPTION1").press
-    End If
-    Err.Clear
+    DoLogout session
 End If
 
 '---------- Selesai ----------
@@ -225,5 +220,46 @@ Function Ambil(dict, key, standar)
         Ambil = dict(key)
     Else
         Ambil = standar
+    End If
+End Function
+
+Sub DoLogout(sess)
+    On Error Resume Next
+    ' Coba /n dulu
+    sess.findById("wnd[0]/tbar[0]/okcd").Text = "/n"
+    sess.findById("wnd[0]").sendVKey 0
+    
+    ' Kemudian /nex
+    sess.findById("wnd[0]/tbar[0]/okcd").Text = "/nex"
+    sess.findById("wnd[0]").sendVKey 0
+    
+    ' Tangani popup logoff jika ada
+    If Not (sess.findById("wnd[1]", False) Is Nothing) Then
+        ' Klik tombol Yes / Log off
+        sess.findById("wnd[1]/usr/btnSPOP-OPTION1").press
+    End If
+    
+    WScript.Sleep 1500
+    Err.Clear
+    
+    ' Bersihkan object dari memory
+    Set sess = Nothing
+    Set connection = Nothing
+    Set application = Nothing
+    Set SapGuiAuto = Nothing
+End Sub
+
+Function VerifyExport(path, fsoObj)
+    If Not fsoObj.FileExists(path) Then
+        VerifyExport = False
+        Exit Function
+    End If
+    
+    Dim f
+    Set f = fsoObj.GetFile(path)
+    If f.Size > 0 Then
+        VerifyExport = True
+    Else
+        VerifyExport = False
     End If
 End Function
