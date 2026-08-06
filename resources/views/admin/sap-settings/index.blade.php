@@ -81,8 +81,8 @@
                 <div class="space-y-2">
                     <label for="exportFolder" class="block text-sm font-bold text-slate-700">Folder Export</label>
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" id="exportFolder" name="exportFolder" value="{{ old('exportFolder', $settings['exportFolder'] ?? 'D:\Sap_export') }}" readonly required
-                            class="flex-1 px-4 py-3 bg-slate-100 border border-slate-200 rounded-2xl text-sm font-mono text-slate-600 focus:ring-0 cursor-not-allowed">
+                        <input type="text" id="exportFolder" name="exportFolder" value="{{ old('exportFolder', $settings['exportFolder'] ?? 'D:\Sap_export') }}" required
+                            class="w-full pl-4 pr-3 py-3 bg-white border border-slate-300 text-slate-900 text-sm rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm">
                         <button type="button" onclick="openFolderModal()" class="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl transition-colors shrink-0 flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                             Pilih Folder
@@ -227,7 +227,9 @@
             const listEl = document.getElementById('folderList');
             listEl.innerHTML = `<div class="p-8 text-center text-slate-500"><svg class="animate-spin h-8 w-8 mx-auto mb-2 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Memuat folder...</div>`;
             
-            fetch(`{{ route('admin.sap-settings.browse') }}?path=${encodeURIComponent(path)}`)
+            let url = `{{ route('admin.sap-settings.browse', [], false) }}?path=${encodeURIComponent(path)}`;
+            
+            fetch(url)
                 .then(res => res.json())
                 .then(data => {
                     if (data.error) {

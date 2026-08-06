@@ -133,3 +133,27 @@ SUKSES: file tersimpan di D:\File file Niyam\Inisiasi Niyam\realisasi_20260806_1
 Impor sukses: 77 baris, 5 cabang dari realisasi_20260806_1350.csv
 [Thu 08/06/2026 13:59:50.24] Impor selesai - exit code 0 
  
+================================================== 
+[Thu 08/06/2026 14:55:18.96] LANGKAH 1 - Mulai export SAP 
+SUKSES: file tersimpan di D:\KHS\realisasi_20260806_1455.csv
+[Thu 08/06/2026 14:56:37.26] Export selesai - exit code 0 
+[Thu 08/06/2026 14:56:37.27] LANGKAH 2 - Mulai impor ke dashboard 
+Impor sukses: 77 baris, 5 cabang dari realisasi_20260806_1435.csv
+[Thu 08/06/2026 14:56:41.78] Impor selesai - exit code 0 
+ 
+================================================== 
+[Thu 08/06/2026 15:01:18.92] LANGKAH 1 - Mulai export SAP 
+SUKSES: file tersimpan di D:\File file Niyam\realisasi_20260806_1501.csv
+[Thu 08/06/2026 15:01:34.72] Export selesai - exit code 0 
+[Thu 08/06/2026 15:01:34.74] LANGKAH 2 - Mulai impor ke dashboard 
+Impor sukses: 77 baris, 5 cabang dari realisasi_20260806_1435.csv
+[Thu 08/06/2026 15:01:37.25] Impor selesai - exit code 0 
+ 
+================================================== 
+[Thu 08/06/2026 15:19:20.24] LANGKAH 1 - Mulai export SAP 
+SUKSES: file tersimpan di D:\File file Niyam\realisasi_20260806_1519.csv
+[Thu 08/06/2026 15:19:36.51] Export selesai - exit code 0 
+[Thu 08/06/2026 15:19:36.51] LANGKAH 2 - Mulai impor ke dashboard 
+Impor sukses: 77 baris, 5 cabang dari realisasi_20260806_1435.csv
+[Thu 08/06/2026 15:19:40.29] Impor selesai - exit code 0 
+ 
