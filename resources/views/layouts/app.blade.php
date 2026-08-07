@@ -9,7 +9,13 @@
         <!-- Favicon -->
         <link rel="icon" type="image/png" href="{{ asset('images/airnav-logo.png') }}">
         <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @if (file_exists(public_path('build/manifest.json')))
+            @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @elseif (config('app.debug'))
+            <div style="background:#b91c1c;color:#fff;padding:12px;font-family:sans-serif;font-size:14px">
+                ⚠️ Vite manifest tidak ditemukan. Jalankan <code>npm run build</code> lalu commit folder <code>public/build/</code>.
+            </div>
+        @endif
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
         @livewireStyles

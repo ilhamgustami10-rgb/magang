@@ -2,6 +2,8 @@
 use App\Models\TrafficUpload;
 use App\Models\TrafficData;
 use App\Models\Airline;
+use App\Helpers\CsvHelper;
+use Illuminate\Support\Facades\Log;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
@@ -67,39 +69,7 @@ class extends Component {
 
     private function parseDate($value)
     {
-        if ($value === null || $value === '') return null;
-
-        // Excel serial number (mis. 46023)
-        if (is_numeric($value)) {
-            try {
-                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$value)->format('Y-m-d');
-            } catch (\Exception $e) {
-                return null;
-            }
-        }
-
-        $value = trim((string)$value);
-
-        // Buang jam jika ada (2026-01-01 00:00:00)
-        if (strpos($value, ' ') !== false) {
-            $value = explode(' ', $value)[0];
-        }
-
-        // Format Y-m-d (2026-01-31)
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-            return $value;
-        }
-
-        // Format m/d/Y atau d/m/Y
-        if (preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $value)) {
-            $parts = explode('/', $value);
-            $bulan = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
-            $hari  = str_pad($parts[1], 2, '0', STR_PAD_LEFT);
-            return $parts[2] . '-' . $bulan . '-' . $hari;
-        }
-
-        $ts = strtotime($value);
-        return $ts ? date('Y-m-d', $ts) : null;
+        return CsvHelper::parseDate($value);
     }
 
     private function parseTime($value)
@@ -134,6 +104,10 @@ class extends Component {
     public function prosesImport()
     {
         try {
+            @set_time_limit(300);
+            @ini_set('memory_limit', '512M');
+            DB::disableQueryLog();
+
             $this->validate([
                 'fileImport' => 'required|file|max:20480'
             ]);
@@ -181,8 +155,6 @@ class extends Component {
 
             $dataRows = array_slice($rows, $headerIndex + 1);
 
-            DB::beginTransaction();
-
             $upload = TrafficUpload::create([
                 'file_name'   => $this->fileImport->getClientOriginalName(),
                 'uploaded_by' => auth()->user()->name ?? 'System',
@@ -191,17 +163,37 @@ class extends Component {
             ]);
 
             $successCount  = 0;
+            $skippedCount  = 0;
+            $failedCount   = 0;
             $tanggalValues = [];
             $homeBase      = 'WARR'; // Kantor Cabang WARR (Juanda, Surabaya)
 
+            $airlines = \App\Models\Airline::pluck('id', 'airline3_code');
+            $batch = [];
+            $now = now();
+
             foreach ($dataRows as $row) {
-                if (empty(array_filter($row, fn($v) => $v !== null && $v !== ''))) continue;
+                if (!CsvHelper::isDataRow($row)) { 
+                    $skippedCount++; 
+                    continue; 
+                }
+                
+                if (empty(array_filter($row, fn($v) => $v !== null && $v !== ''))) {
+                    $skippedCount++;
+                    continue;
+                }
 
                 $tanggal = $this->parseDate($iDof !== null ? ($row[$iDof] ?? null) : null);
-                if (!$tanggal) continue;
+                if (!$tanggal) {
+                    $failedCount++;
+                    continue;
+                }
 
                 $aircraftId = $iAcid !== null ? trim((string)($row[$iAcid] ?? '')) : '';
-                if ($aircraftId === '') continue;
+                if ($aircraftId === '') {
+                    $failedCount++;
+                    continue;
+                }
 
                 $adep = $iAdep !== null ? trim((string)($row[$iAdep] ?? '')) : null;
                 $ades = $iAdes !== null ? trim((string)($row[$iAdes] ?? '')) : null;
@@ -215,16 +207,16 @@ class extends Component {
                 }
 
                 $airline3Code = substr($aircraftId, 0, 3);
-                $airline = Airline::where('airline3_code', $airline3Code)->first();
+                $airlineId = $airlines[$airline3Code] ?? null;
 
                 $tanggalValues[] = $tanggal;
 
-                TrafficData::create([
+                $batch[] = [
                     'id_traffic_upload' => $upload->id_traffic_upload,
                     'tanggal'       => $tanggal,
                     'aircraft_id'   => $aircraftId,
                     'airline3_code' => $airline3Code,
-                    'id_airline'    => $airline->id ?? null,
+                    'id_airline'    => $airlineId,
                     'registrasi'    => $iReg !== null ? ($row[$iReg] ?? null) : null,
                     'type'          => $iType !== null ? ($row[$iType] ?? null) : null,
                     'adep'          => $adep,
@@ -243,9 +235,17 @@ class extends Component {
                     'pob'           => null,
                     'remark'        => null,
                     'status_flight' => 'REGULER',
-                ]);
+                    'created_at'    => $now,
+                    'updated_at'    => $now,
+                ];
 
                 $successCount++;
+            }
+
+            foreach (array_chunk($batch, 500) as $chunk) {
+                DB::transaction(function () use ($chunk) {
+                    DB::table('traffic_data')->insert($chunk);
+                });
             }
 
             if (!empty($tanggalValues)) {
@@ -258,13 +258,15 @@ class extends Component {
                 $upload->update(['total_rows' => $successCount]);
             }
 
-            DB::commit();
+            Log::info("Import traffic selesai: {$successCount} baris data, {$skippedCount} dilewati, {$failedCount} gagal");
 
             session()->flash('message',
                 "\u{2705} DATA TRAFFIC BERHASIL DISIMPAN!<br>" .
                 "ID Upload: " . $upload->id_traffic_upload . "<br>" .
                 "File: " . $upload->file_name . "<br>" .
-                "Total data: " . $successCount . " baris<br>" .
+                "Berhasil: " . $successCount . " baris<br>" .
+                "Dilewati: " . $skippedCount . " baris<br>" .
+                "Gagal: " . $failedCount . " baris<br>" .
                 "Range Tanggal: " . ($upload->tanggal_awal ?? '-') . " s/d " . ($upload->tanggal_akhir ?? '-')
             );
 
@@ -272,7 +274,6 @@ class extends Component {
             $this->dispatch('$refresh');
 
         } catch (\Exception $e) {
-            DB::rollBack();
             session()->flash('error', 'Error: ' . $e->getMessage() . ' - Line: ' . $e->getLine());
             \Log::error('Import traffic error: ' . $e->getMessage());
         }
