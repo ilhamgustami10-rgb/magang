@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\CsvHelper;
 use App\Models\FinanceBranch;
 use App\Models\FinanceItem;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,10 @@ class FinanceImportService
     /** @return array{branches:int, items:int} */
     public function import(string $path, string $fileName = 'SAP_Finance_Export.xlsx'): array
     {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+        DB::disableQueryLog();
+
         $rows = $this->readRows($path);
         $branches = $this->extract($rows);
 
@@ -66,26 +71,7 @@ class FinanceImportService
     /** Baca file berdelimiter dengan auto-deteksi (koma / titik koma / tab). */
     private function readDelimited(string $path): array
     {
-        $raw = file_get_contents($path);
-        if ($raw === false) {
-            throw new \RuntimeException('File tidak dapat dibaca.');
-        }
-        $raw = preg_replace('/^\xEF\xBB\xBF/', '', $raw);
-        $lines = preg_split('/\r\n|\r|\n/', $raw);
-
-        $sample = implode("\n", array_slice($lines, 0, 20));
-        $counts = [',' => substr_count($sample, ','), ';' => substr_count($sample, ';'), "\t" => substr_count($sample, "\t")];
-        arsort($counts);
-        $delimiter = array_key_first($counts);
-        if (($counts[$delimiter] ?? 0) === 0) {
-            $delimiter = ',';
-        }
-
-        $rows = [];
-        foreach ($lines as $line) {
-            $rows[] = $line === '' ? [] : str_getcsv($line, $delimiter);
-        }
-        return $rows;
+        return iterator_to_array(CsvHelper::streamCsv($path));
     }
 
     /** Ekstrak cabang + item: header dinamis, kolom by-nama, item→cabang. */
@@ -174,6 +160,9 @@ class FinanceImportService
             \App\Models\FinanceUpload::query()->delete();
 
             $itemCount = 0;
+            $itemsToInsert = [];
+            $now = now();
+
             foreach ($branches as $b) {
                 $branchAttrs = ['name' => $b['name']];
                 foreach ($this->metricColumns as $col) {
@@ -184,7 +173,7 @@ class FinanceImportService
                 $branch = FinanceBranch::updateOrCreate(['code' => $b['code']], $branchAttrs);
 
                 foreach ($b['items'] as $it) {
-                    FinanceItem::create([
+                    $itemsToInsert[] = [
                         'branch_id'        => $branch->id,
                         'code'             => $it['code'],
                         'name'             => $it['name'],
@@ -193,8 +182,16 @@ class FinanceImportService
                         'commitment'       => $it['commitment'],
                         'total_consume'    => $it['total_consume'],
                         'available_budget' => $it['available_budget'],
-                    ]);
+                        'created_at'       => $now,
+                        'updated_at'       => $now,
+                    ];
                     $itemCount++;
+                }
+            }
+
+            if (!empty($itemsToInsert)) {
+                foreach (array_chunk($itemsToInsert, 500) as $chunk) {
+                    DB::table('finance_items')->insert($chunk);
                 }
             }
 

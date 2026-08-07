@@ -17,6 +17,9 @@ class ImportLog extends Model
         'branches_count',
         'items_count',
         'skipped_count',
+        'duration_seconds',
+        'failed_count',
+        'status',
     ];
 
     public function budgetRealisasi()

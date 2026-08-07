@@ -2,6 +2,8 @@
 use App\Models\TerminalUpload;
 use App\Models\TerminalData;
 use App\Models\Airline;
+use App\Helpers\CsvHelper;
+use Illuminate\Support\Facades\Log;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
@@ -119,30 +121,16 @@ class extends Component {
     
     private function parseDate($value)
     {
-        if (empty($value)) return null;
-        
-        $value = trim($value);
-        
-        // Format dd/mm/yyyy
-        if (preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $value)) {
-            $parts = explode('/', $value);
-            $day = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
-            $month = str_pad($parts[1], 2, '0', STR_PAD_LEFT);
-            $year = $parts[2];
-            return "{$year}-{$month}-{$day}";
-        }
-        
-        // Format Y-m-d
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-            return $value;
-        }
-        
-        return null;
+        return CsvHelper::parseDate($value);
     }
     
     public function prosesImport()
     {
         try {
+            @set_time_limit(300);
+            @ini_set('memory_limit', '512M');
+            DB::disableQueryLog();
+
             $this->validate([
                 'fileImport' => 'required|file|max:5120'
             ]);
@@ -201,8 +189,6 @@ class extends Component {
                 $rates = $currencyService->getRatesForDateRange($minDate, $maxDate);
             }
             
-            DB::beginTransaction();
-            
             // Simpan ke terminal_upload
             $upload = TerminalUpload::create([
                 'file_name' => $this->fileImport->getClientOriginalName(),
@@ -212,21 +198,36 @@ class extends Component {
             ]);
             
             $successCount = 0;
+            $skippedCount = 0;
+            $failedCount = 0;
             $tanggalValues = [];
             
+            $airlines = \App\Models\Airline::pluck('id', 'airline3_code');
+            $batch = [];
+            $now = now();
+            
             foreach ($dataBersih as $row) {
+                if (!CsvHelper::isDataRow($row)) {
+                    $skippedCount++;
+                    continue;
+                }
+
                 // Mapping sesuai struktur Excel Terminal
                 $aircraftId = $row[1] ?? null;
-                if (empty($aircraftId)) continue;
+                if (empty($aircraftId)) {
+                    $failedCount++;
+                    continue;
+                }
                 
                 $airline3Code = substr($aircraftId, 0, 3);
-                $airline = Airline::where('airline3_code', $airline3Code)->first();
+                $airlineId = $airlines[$airline3Code] ?? null;
                 
                 // Parse tanggal
                 $tanggal = $this->parseDate($row[4] ?? null);
                 if ($tanggal) {
                     $tanggalValues[] = $tanggal;
                 } else {
+                    $failedCount++;
                     continue;
                 }
                 
@@ -255,11 +256,11 @@ class extends Component {
                 }
                 
                 // Simpan data
-                TerminalData::create([
+                $batch[] = [
                     'id_terminal_upload' => $upload->id_terminal_upload,
                     'aircraft_id' => $aircraftId,
                     'airline3_code' => $airline3Code,
-                    'id_airline' => $airline->id ?? null,
+                    'id_airline' => $airlineId,
                     'bandara' => $row[3] ?? null, // ADES sebagai bandara tujuan
                     'tanggal' => $tanggal,
                     'registrasi' => $row[5] ?? null,
@@ -274,9 +275,17 @@ class extends Component {
                     'exchange_rate' => $exchangeRate,
                     'biaya_terminal_idr' => $biayaTerminalIdr,
                     'status_penerbangan' => $row[10] ?? null, // Flight Type
-                ]);
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
                 
                 $successCount++;
+            }
+            
+            foreach (array_chunk($batch, 500) as $chunk) {
+                DB::transaction(function () use ($chunk) {
+                    DB::table('terminal_data')->insert($chunk);
+                });
             }
             
             // Update range tanggal
@@ -286,15 +295,19 @@ class extends Component {
                     'tanggal_akhir' => max($tanggalValues),
                     'total_rows' => $successCount
                 ]);
+            } else {
+                $upload->update(['total_rows' => $successCount]);
             }
             
-            DB::commit();
+            Log::info("Import terminal selesai: {$successCount} baris data, {$skippedCount} dilewati, {$failedCount} gagal");
             
             session()->flash('message', 
                 "✅ DATA TERMINAL BERHASIL DISIMPAN!<br>" .
                 "ID Upload: " . $upload->id_terminal_upload . "<br>" .
                 "File: " . $upload->file_name . "<br>" .
-                "Total data: " . $successCount . " baris<br>" .
+                "Berhasil: " . $successCount . " baris<br>" .
+                "Dilewati: " . $skippedCount . " baris<br>" .
+                "Gagal: " . $failedCount . " baris<br>" .
                 "Range Tanggal: " . ($upload->tanggal_awal ?? '-') . " s/d " . ($upload->tanggal_akhir ?? '-')
             );
             
@@ -302,7 +315,6 @@ class extends Component {
             $this->dispatch('$refresh');
             
         } catch (\Exception $e) {
-            DB::rollBack();
             session()->flash('error', 'Error: ' . $e->getMessage() . ' - Line: ' . $e->getLine());
             \Log::error('Import terminal error: ' . $e->getMessage());
             \Log::error($e->getTraceAsString());

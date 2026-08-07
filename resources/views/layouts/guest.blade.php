@@ -18,7 +18,13 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @if (file_exists(public_path('build/manifest.json')))
+            @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @elseif (config('app.debug'))
+            <div style="background:#b91c1c;color:#fff;padding:12px;font-family:sans-serif;font-size:14px">
+                ⚠️ Vite manifest tidak ditemukan. Jalankan <code>npm run build</code> lalu commit folder <code>public/build/</code>.
+            </div>
+        @endif
 
         <!-- Favicon -->
         <link rel="icon" type="image/png" href="{{ asset('images/airnav-logo.png') }}">

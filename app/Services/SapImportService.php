@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Helpers\CsvHelper;
 use App\Models\BudgetRealisasi;
 use App\Models\ImportLog;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -34,6 +36,12 @@ class SapImportService
             throw new \Exception("Unsupported file type: {$ext}");
         }
 
+        // Determine status
+        $status = 'success';
+        if ($stats['failed_count'] > 0) {
+            $status = $stats['rows_imported'] > 0 ? 'partial' : 'failed';
+        }
+
         // Log import
         $importLog = ImportLog::create([
             'file_name' => $originalFileName,
@@ -42,46 +50,26 @@ class SapImportService
             'rows_imported' => $stats['rows_imported'],
             'branches_count' => $stats['branches_count'],
             'items_count' => $stats['items_count'],
-            'skipped_count' => $stats['skipped_count']
+            'skipped_count' => $stats['skipped_count'],
+            'duration_seconds' => $stats['duration_seconds'],
+            'failed_count' => $stats['failed_count'],
+            'status' => $status,
         ]);
 
         // Assosiate import_id with the new rows
-        BudgetRealisasi::where('report_date', $reportDate)
-            ->whereNull('import_id') // only update newly inserted/updated rows that have no import_id or we can just update all for this date
+        DB::table('budget_realisasi')
+            ->where('report_date', $reportDate)
+            ->whereNull('import_id')
             ->update(['import_id' => $importLog->id]);
+
+        Log::info("Imported SAP data from {$originalFileName} - Rows: {$stats['rows_imported']}, Failed: {$stats['failed_count']}, Duration: {$stats['duration_seconds']}s");
 
         return $stats;
     }
 
     private function parseCsv(string $filePath, string $reportDate): array
     {
-        $content = file_get_contents($filePath);
-        $bom = pack('H*','EFBBBF');
-        $content = preg_replace("/^$bom/", '', $content);
-        $lines = explode("\n", $content);
-        
-        // Auto-deteksi delimiter: TAB, koma, titik-koma
-        // SAP GUI sering mengekspor file .csv dengan delimiter TAB, bukan koma
-        $sample = implode("\n", array_slice($lines, 0, 20));
-        $counts = [
-            ','  => substr_count($sample, ','),
-            ';'  => substr_count($sample, ';'),
-            "\t" => substr_count($sample, "\t"),
-        ];
-        arsort($counts);
-        $delimiter = array_key_first($counts);
-        if (($counts[$delimiter] ?? 0) === 0) {
-            $delimiter = ','; // fallback ke koma jika tidak ada delimiter terdeteksi
-        }
-
-        $dataRows = [];
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (!empty($line)) {
-                $dataRows[] = str_getcsv($line, $delimiter);
-            }
-        }
-
+        $dataRows = iterator_to_array(CsvHelper::streamCsv($filePath));
         return $this->processData($dataRows, $reportDate);
     }
 
@@ -103,6 +91,12 @@ class SapImportService
 
     private function processData(array $rows, string $reportDate): array
     {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+        DB::disableQueryLog();
+
+        $startTime = microtime(true);
+
         $headerMapping = [];
         $headerParsed = false;
         $targetColumns = ['rkap', 'release_budget', 'commitment', 'total_consume', 'available_budget'];
@@ -112,8 +106,13 @@ class SapImportService
             'rows_imported' => 0,
             'branches_count' => 0,
             'items_count' => 0,
-            'skipped_count' => 0
+            'skipped_count' => 0,
+            'failed_count' => 0,
+            'duration_seconds' => 0,
         ];
+
+        $recordsToInsert = [];
+        $now = now();
 
         foreach ($rows as $rowIndex => $row) {
             if (!$headerParsed) {
@@ -206,15 +205,16 @@ class SapImportService
 
             try {
                 if (stripos($firstColRaw, 'funds center') !== false) {
-                    BudgetRealisasi::updateOrCreate([
+                    $recordsToInsert[] = array_merge([
                         'report_date' => $reportDate,
                         'branch_code' => null,
                         'item_code' => null,
                         'level' => 'total',
-                    ], array_merge($values, [
                         'branch_name' => null,
                         'item_name' => 'Grand Total',
-                    ]));
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ], $values);
                     $stats['rows_imported']++;
                     continue;
                 }
@@ -230,29 +230,31 @@ class SapImportService
                     $branchName = $name;
 
                     foreach ($buffer as $item) {
-                        BudgetRealisasi::updateOrCreate([
+                        $recordsToInsert[] = array_merge([
                             'report_date' => $reportDate,
                             'branch_code' => $branchCode,
                             'item_code' => $item['item_code'],
                             'level' => 'item',
-                        ], array_merge($item['values'], [
                             'branch_name' => $branchName,
                             'item_name' => $item['item_name'],
-                        ]));
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ], $item['values']);
                         $stats['rows_imported']++;
                         $stats['items_count']++;
                     }
                     $buffer = [];
 
-                    BudgetRealisasi::updateOrCreate([
+                    $recordsToInsert[] = array_merge([
                         'report_date' => $reportDate,
                         'branch_code' => $branchCode,
                         'item_code' => null,
                         'level' => 'cabang',
-                    ], array_merge($values, [
                         'branch_name' => $branchName,
                         'item_name' => null,
-                    ]));
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ], $values);
                     $stats['rows_imported']++;
                     $stats['branches_count']++;
                 } else {
@@ -262,8 +264,20 @@ class SapImportService
             } catch (\Exception $e) {
                 Log::error("Failed to parse row: " . $e->getMessage(), ['row' => $row]);
                 $stats['skipped_count']++;
+                $stats['failed_count']++;
             }
         }
+
+        if (!empty($recordsToInsert)) {
+            DB::transaction(function () use ($reportDate, $recordsToInsert) {
+                DB::table('budget_realisasi')->where('report_date', $reportDate)->delete();
+                foreach (array_chunk($recordsToInsert, 500) as $chunk) {
+                    DB::table('budget_realisasi')->insert($chunk);
+                }
+            });
+        }
+
+        $stats['duration_seconds'] = round(microtime(true) - $startTime, 2);
 
         return $stats;
     }
